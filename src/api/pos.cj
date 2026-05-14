@@ -12,8 +12,8 @@ import jian.api.exceptions.InvalidTypeAnnotationUsageException
  * TODO: add comments
  * throws InvalidTypeAnnotationUsageException
  */
-public func Positional<T>(default!: ?T = None, help!: ?String = None): T where T <: Parsable<T> {
-    throw InvalidTypeAnnotationUsageException("Positional")
+public func Pos<T>(default!: ?T = None, help!: ?String = None): T where T <: Parsable<T> {
+    throw InvalidTypeAnnotationUsageException("Pos")
 }
 
 // cjlint-ignore -end

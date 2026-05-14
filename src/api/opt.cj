@@ -12,8 +12,8 @@ import jian.api.exceptions.InvalidTypeAnnotationUsageException
  * TODO: add comments
  * throws InvalidTypeAnnotationUsageException
  */
-public func Optional<T>(shortName!: ?Rune = None, longName!: ?String = None, default!: ?T = None, help!: ?String = None): T where T <: Parsable<T> {
-    throw InvalidTypeAnnotationUsageException("Optional")
+public func Opt<T>(shortName!: ?Rune = None, longName!: ?String = None, default!: ?T = None, help!: ?String = None): T where T <: Parsable<T> {
+    throw InvalidTypeAnnotationUsageException("Opt")
 }
 
 // cjlint-ignore -end
