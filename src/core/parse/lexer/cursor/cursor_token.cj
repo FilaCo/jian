@@ -14,10 +14,11 @@ struct CursorToken {
 @Derive[Equatable, ToString]
 enum CursorTokenKind {
     | WS // Any whitespace character sequence.
-    | StdinPlaceholder // `-` surrounded by whitespaces.
+    | Comma // `,`.
     | Eq // `=`.
-    | Dashed
-    | DoubleDashed
-    | Value // Arbitrary string
-    | EOI
+    | StdinPlaceholder // `-` surrounded by whitespaces.
+    | Dashed // Dashed option, e.g. `-f` or `-vvv`.
+    | DoubleDashed // Double dashed option, e.g. `--foo`.
+    | Value // Arbitrary string value.
+    | EOI // End of input.
 }

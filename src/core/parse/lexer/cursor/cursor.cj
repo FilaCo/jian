@@ -1,10 +1,10 @@
 protected package jian.core.parse.lexer.cursor
 
-struct Cursor {
+protected struct Cursor {
     private static const EOF_CHAR = b'\0'
     private var remainderSize: Int64
 
-    Cursor(private var input: String) {
+    protected Cursor(private var input: String) {
         remainderSize = input.size
     }
 

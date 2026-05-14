@@ -1,5 +1,8 @@
 protected package jian.core.parse.lexer
 
+import std.deriving.*
+
+@Derive[Equatable, ToString]
 enum Token {
     | Eq // `=`.
     | DoubleDashed(String) // Value prefixed with `--`, e.g. `--foo`.

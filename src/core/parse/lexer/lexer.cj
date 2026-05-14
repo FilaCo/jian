@@ -1,12 +1,14 @@
 protected package jian.core.parse.lexer
 
-class Lexer {
-    private Lexer(private let input: Array<String>, private var pos: Int64, private var curToken: Token) {}
+import jian.core.parse.lexer.cursor.Cursor
 
-    static func make(input: Array<String>): Lexer {
-        let lexer = Lexer(input, 0, Dummy)
+class Lexer {
+    private Lexer(private let cursor: Cursor, private var bytePos: Int64, private var curToken: Token) {}
+
+    static func make(input: String): Lexer {
+        let lexer = Lexer(Cursor(input), 0, Dummy)
         let _ = lexer.bump()
-        lexer.pos = 0
+        lexer.bytePos = 0
 
         lexer
     }
@@ -16,11 +18,6 @@ class Lexer {
     }
 
     func bump(): Token {
-        if (pos == input.size) {
-            return EOI
-        }
-
-        let curItem = input[pos]
         // if (curItem == "--") {
         //     return EOI
         // }
@@ -30,6 +27,10 @@ class Lexer {
         //     case b'-' => dashed(curItem)
         //     case _ => Value(curItem)
         // }
+        Dummy
+    }
+
+    private func nextTokenFromCursor(): Token {
         Dummy
     }
 }

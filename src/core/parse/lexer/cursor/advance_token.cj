@@ -20,6 +20,7 @@ extend Cursor {
                 case _ => dashed()
             }
             case ' ' => ws()
+            case ',' => Comma
             case '=' => Eq
             case _ => value()
         }
