@@ -1,10 +1,14 @@
-[workspace]
-members = ["clap", "clap_macros"]
-build-members = []
-test-members = []
+[package]
+cjc-version = "1.0.5"
+name = "jian"
+description = "nothing here"
+version = "1.0.0"
+target-dir = ""
+output-type = "dynamic"
 compile-option = ""
 override-compile-option = ""
 link-option = ""
-target-dir = ""
+package-configuration = {}
 
 [dependencies]
+result_cj = { git = "https://github.com/FilaCo/result_cj.git" }
