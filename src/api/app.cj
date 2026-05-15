@@ -2,7 +2,6 @@ protected package jian.api
 
 import std.collection.HashMap
 import jian.core.{CallbackSpec, CommandSpec, parse}
-import result_cj.Result
 
 public func commandLine(noArgsIsHelp!: Bool = false): AppBuilder {
     AppBuilder()
@@ -11,6 +10,10 @@ public func commandLine(noArgsIsHelp!: Bool = false): AppBuilder {
 /**
  * cjlint-ignore -start !G.OPR.01
  * TODO: add description
+ */
+
+/**
+ *
  */
 public class App {
     App(private let commandSpecs!: HashMap<String, CommandSpec> = HashMap(),
@@ -37,7 +40,9 @@ public class App {
         ifSome(
             callback,
             {
-                cb => parse(argv, cb.argSpecs).map {matches => cb.invoke(matches)}.unwrap() // TODO: error handling
+                cb =>
+                    let matches = parse(argv, cb.argSpecs)
+                    cb.invoke(matches)
             }
         )
 
@@ -57,7 +62,7 @@ public class App {
          * 3. if not found then give up
          */
         match (commandSpecs.get(firstArg)) {
-            case Some(cmdSpec) => parse(argv[1..], cmdSpec.argSpecs).map {matches => cmdSpec.invoke(matches)}.unwrap() // TODO: error handling
+            case Some(cmdSpec) => cmdSpec.invoke(parse(argv[1..], cmdSpec.argSpecs)) // TODO: error handling
             case _ => subApps.get(firstArg).map {app => app(argv[1..])} ?? throw Exception()
         }
     }
@@ -67,8 +72,8 @@ public class AppBuilder {
     AppBuilder() {
     }
 
-    public func build(): Result<App, BuildAppError> {
-        Ok(App())
+    public func build(): App {
+        App()
     }
 
     public func add(builder: AppBuilder, name!: ?String = None, help!: ?String = None): This {
@@ -84,10 +89,9 @@ public class AppBuilder {
     }
 
     public operator func ()(argv: Array<String>): Unit {
-        build().map {app => app(argv)}.unwrap()
+        let app = build()
+        app(argv)
     }
 }
 
 // cjlint-ignore -end
-
-type BuildAppError = String
