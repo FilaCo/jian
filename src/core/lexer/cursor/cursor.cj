@@ -1,4 +1,4 @@
-protected package jian.core.parse.lexer.cursor
+protected package jian.core.lexer.cursor
 
 protected struct Cursor {
     private static const EOF_CHAR = b'\0'

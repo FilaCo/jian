@@ -1,4 +1,4 @@
-protected package jian.core.parse.lexer
+protected package jian.core.lexer
 
 import std.unittest.*
 import std.unittest.testmacro.*

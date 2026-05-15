@@ -1,4 +1,4 @@
-protected package jian.core.parse.lexer.cursor
+protected package jian.core.lexer.cursor
 
 extend Cursor {
     static func tokenize(input: String): Iterator<CursorToken> {

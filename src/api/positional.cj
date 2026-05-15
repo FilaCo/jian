@@ -1,6 +1,5 @@
 protected package jian.api
 
-import std.convert.Parsable
 import jian.api.exceptions.InvalidTypeAnnotationUsageException
 
 /**
@@ -12,8 +11,8 @@ import jian.api.exceptions.InvalidTypeAnnotationUsageException
  * TODO: add comments
  * throws InvalidTypeAnnotationUsageException
  */
-public func Opt<T>(shortName!: ?Rune = None, longName!: ?String = None, default!: ?T = None, help!: ?String = None): T where T <: Parsable<T> {
-    throw InvalidTypeAnnotationUsageException("Opt")
+public func Positional<T>(help!: ?String = None): T {
+    throw InvalidTypeAnnotationUsageException("Positional")
 }
 
 // cjlint-ignore -end

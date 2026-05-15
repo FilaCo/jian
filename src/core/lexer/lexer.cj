@@ -1,6 +1,6 @@
-protected package jian.core.parse.lexer
+protected package jian.core.lexer
 
-import jian.core.parse.lexer.cursor.Cursor
+import jian.core.lexer.cursor.Cursor
 
 class Lexer {
     private Lexer(private let cursor: Cursor, private var bytePos: Int64, private var curToken: Token) {}
