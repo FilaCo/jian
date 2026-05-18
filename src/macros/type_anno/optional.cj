@@ -1,6 +1,4 @@
-protected package jian.api
-
-import jian.api.exceptions.InvalidTypeAnnotationUsageException
+protected package jian.macros.type_anno
 
 /**
  * cjlint-ignore -start !G.NAM.04 !G.FUN.02
@@ -9,10 +7,11 @@ import jian.api.exceptions.InvalidTypeAnnotationUsageException
 
 /**
  * TODO: add comments
- * throws InvalidTypeAnnotationUsageException
+ * throws UnsupportedException
  */
 public func Optional<T>(shortName!: ?Rune = None, longName!: ?String = None, help!: ?String = None): T {
-    throw InvalidTypeAnnotationUsageException("Optional")
+    throw UnsupportedException(
+        "Optional can appear only as an argument default value of function modified by the @Command or @Callback macro.")
 }
 
 // cjlint-ignore -end

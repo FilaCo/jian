@@ -1,3 +1,3 @@
-macro package jian
+package jian
 
-public import jian.api.*
+public import jian.builder.* // cjlint-ignore !G.PKG.01
