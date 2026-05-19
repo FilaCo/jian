@@ -63,7 +63,7 @@ class Lexer <: Iterable<Token> {
     private func doubleDashed(s: String): Token {
         pos++
 
-        let parts = s.split("=", 2)
+        let parts = s.removePrefix("--").split("=", 2)
         if (parts.size > 1) {
             DoubleDashed(parts[0], parts[1])
         } else {
@@ -74,7 +74,7 @@ class Lexer <: Iterable<Token> {
     private func dashed(s: String): Token {
         pos++
 
-        let parts = s.split("=", 2)
+        let parts = s.removePrefix("-").split("=", 2)
         if (parts.size > 1) {
             Dashed(parts[0], parts[1])
         } else {
@@ -102,12 +102,12 @@ class TokenIterator <: Iterator<Token> {
 
 @Derive[Equatable, ToString]
 enum Token {
-    | StdinPlaceholder
-    | Dashed(String)
-    | Dashed(String, String)
-    | DoubleDashed(String)
-    | DoubleDashed(String, String)
-    | Value(String)
-    | Eoi // End of input.
-    | Dummy
+    | StdinPlaceholder // `-`.
+    | Dashed(String) // Dashed option, e.g. `-f` or `-vvv`.
+    | Dashed(String, String) // Dashed option with associated value, e.g. `-f=123`.
+    | DoubleDashed(String) // Double dashed option, e.g. `--foo`.
+    | DoubleDashed(String, String) // Double dashed option with associated value, e.g. `--foo=bar`.
+    | Value(String) // Just a value, e.g. `boo`.
+    | Eoi // End of input. Lexer emits this token if it reaches the end of input or the `--` value.
+    | Dummy // Dummy placeholder for parsing needs.
 }

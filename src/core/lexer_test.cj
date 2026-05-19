@@ -9,12 +9,12 @@ class LexerTest {
     @TestCase[input in [ 
 (
  [ "cjpm", "init", "--name", "jian", "--type=dynamic" ], 
- [ Value("cjpm"), Value("init"), DoubleDashed("--name"), Value("jian"), DoubleDashed("--type", "dynamic") ] 
+ [ Value("cjpm"), Value("init"), DoubleDashed("name"), Value("jian"), DoubleDashed("type", "dynamic") ] 
 ), 
  
 (
  [ "cjc", "-", "--output-type=exe", "--output-dir", "whatever" ], 
- [ Value("cjc"), StdinPlaceholder, DoubleDashed("--output-type", "exe"), DoubleDashed("--output-dir"), Value("whatever") ] 
+ [ Value("cjc"), StdinPlaceholder, DoubleDashed("output-type", "exe"), DoubleDashed("output-dir"), Value("whatever") ] 
 ), 
  
 (
@@ -76,7 +76,7 @@ class LexerTest {
     func bumpWorks() {
         // arrange
         let input = ["cjdev", "build", "-t", "debug", "cjc", "--", "whatever", "else"]
-        let expected = [Value("cjdev"), Value("build"), Dashed("-t"), Value("debug"), Value("cjc")]
+        let expected = [Value("cjdev"), Value("build"), Dashed("t"), Value("debug"), Value("cjc")]
         let sut = Lexer.make(input)
 
         // act
