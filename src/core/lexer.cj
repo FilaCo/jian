@@ -2,13 +2,13 @@ protected package jian.core
 
 import std.deriving.*
 
-struct Lexer <: Iterable<Token> {
+class Lexer <: Iterable<Token> {
     private var pos = 0
     private var cur = Dummy
     private Lexer(private let argv: Array<String>) {}
 
     static func make(argv: Array<String>): Lexer {
-        var lexer = Lexer(argv)
+        let lexer = Lexer(argv)
         let _ = lexer.bump()
 
         lexer
@@ -22,33 +22,47 @@ struct Lexer <: Iterable<Token> {
         cur
     }
 
-    mut func bump(): Token {
-        if (pos > argv.size) {
-            return cur
-        }
+    func bump(): Token {
+        let tok = argv.get(pos).map {
+            s: String => match (s) {
+                case "--" => Eoi
+                case "-" => stdinPlaceholder()
+                case s where s.startsWith("--") => doubleDashed(s)
+                case s where s.startsWith("-") => dashed(s)
+                case s => value(s)
+            }
+        } ?? Eoi
 
-        if (pos == argv.size) {
-            pos++
-            let res = cur
-            cur = EOI
-            return res
-        }
-
-        let tok = match (argv[pos]) {
-            case "--" => EOI
-            case "-" => StdinPlaceholder
-            case s where s.startsWith("--") => doubleDashed(s)
-            case s where s.startsWith("-") => dashed(s)
-            case s => Value(s)
-        }
-
-        pos++
         let res = cur
         cur = tok
         res
     }
 
+    func isAtEoi(): Bool {
+        pos == argv.size
+    }
+
+    func remainder(): Array<String> {
+        if (isAtEoi() || argv.size == 0) {
+            return []
+        }
+
+        if (cur == Eoi) {
+            return argv[(pos + 1)..]
+        }
+
+        argv[pos - 1..]
+    }
+
+    private func stdinPlaceholder(): Token {
+        pos++
+
+        StdinPlaceholder
+    }
+
     private func doubleDashed(s: String): Token {
+        pos++
+
         let parts = s.split("=", 2)
         if (parts.size > 1) {
             DoubleDashed(parts[0], parts[1])
@@ -58,6 +72,8 @@ struct Lexer <: Iterable<Token> {
     }
 
     private func dashed(s: String): Token {
+        pos++
+
         let parts = s.split("=", 2)
         if (parts.size > 1) {
             Dashed(parts[0], parts[1])
@@ -65,14 +81,20 @@ struct Lexer <: Iterable<Token> {
             Dashed(parts[0])
         }
     }
+
+    private func value(s: String): Token {
+        pos++
+
+        Value(s)
+    }
 }
 
 class TokenIterator <: Iterator<Token> {
-    TokenIterator(private var lexer: Lexer) {}
+    TokenIterator(private let lexer: Lexer) {}
 
     public func next(): ?Token {
         match (lexer.bump()) {
-            case EOI => None
+            case Eoi => None
             case token => Some(token)
         }
     }
@@ -86,6 +108,6 @@ enum Token {
     | DoubleDashed(String)
     | DoubleDashed(String, String)
     | Value(String)
-    | EOI
+    | Eoi // End of input.
     | Dummy
 }
