@@ -17,6 +17,10 @@ class LexerTest {
  [ Value("cjc"), StdinPlaceholder, DoubleDashed("--output-type", "exe"), DoubleDashed("--output-dir"), Value("whatever") ] 
 ), 
  
+(
+ [ "cjdev", "exec", "--", "ls", "-la" ], 
+ [ Value("cjdev"), Value("exec") ] 
+), 
  ]]
     func itWorks(input: (Array<String>, Array<Token>)) {
         // arrange
