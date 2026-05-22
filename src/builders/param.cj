@@ -12,13 +12,13 @@ sealed abstract class Param <: Equatable<Param> {
     }
 }
 
-class Opt <: Param {
+public class Opt <: Param {
     Opt(name!: String, help!: ?String = None, public let short!: ?Byte = None, public let long!: ?String = None) {
         super(name: name, help: help)
     }
 }
 
-class Pos <: Param {
+public class Pos <: Param {
     Pos(name!: String, help!: ?String = None) {
         super(name: name, help: help)
     }

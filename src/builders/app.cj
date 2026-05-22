@@ -1,25 +1,21 @@
 package jian.builders
 
 import std.env.exit
-import std.collection.{collectHashMap, map, HashMap}
-
-/**
- * cjlint-ignore -start !G.OPR.01
- * TODO: add description
- */
+import std.collection.{ArrayList, HashMap, ReadOnlyMap}
 
 /**
  *
  */
 public struct App {
-    App(private let _name: ?String, private let _help: ?String,
-        private let _cmds: HashMap<String, Cmd>, private let _subApps: HashMap<String, App>) {}
+    App(public let name!: ?String = None, public let help!: ?String = None,
+        public let commands!: ReadOnlyMap<String, Command>, public let subApps!: ReadOnlyMap<String, App>,
+        public let callback!: ?Callback = None) {}
 
     public static func builder(): AppBuilder {
         AppBuilder()
     }
 
-    public operator func ()(argv: Array<String>): Nothing {
+    public func run(argv: Array<String>): Nothing {
         // let nonOptions = _callback.map {
         //     cb => try {
         //         parseArguments(argv, cb.argSpecs).nonOptions
@@ -100,23 +96,13 @@ public struct App {
 public class AppBuilder {
     private var _name = None<String>
     private var _help = None<String>
-    private let _cmdBuilders = HashMap<String, CmdBuilder>()
-    private let _subAppBuilders = HashMap<String, AppBuilder>()
+    private let _commands = ArrayList<Command>()
+    private let _subApps = ArrayList<() -> App>()
+    private var _callback = None<Callback>
 
     public func build(): App {
-        let commands = _cmdBuilders |> map {
-            item =>
-                let (name, cmdBuilder) = item
-                (name, cmdBuilder.build())
-        } |> collectHashMap
-
-        let subApps = _subAppBuilders |> map {
-            item =>
-                let (name, subAppBuilder) = item
-                (name, subAppBuilder.build())
-        } |> collectHashMap
-
-        App(_name, _help, commands, subApps)
+        throw Exception()
+        // App(name: getName(), help: getHelp(), commands: getCommands(), subApps: getSubApps())
     }
 
     public func name(name: String): This {
@@ -124,35 +110,43 @@ public class AppBuilder {
         this
     }
 
-    public func help(help: String): AppBuilder {
+    public func getName(): ?String {
+        _name
+    }
+
+    public func help(help: String): This {
         _help = help
         this
     }
 
-    /**
-     * Adds sub application to the current application.
-     *
-     * throws IllegalArgumentException - if `name` and `builder.getName()` are both `None`
-     */
-    public func add(builder: AppBuilder, name!: ?String = None, help!: ?String = None): AppBuilder {
+    public func getHelp(): ?String {
+        _help
+    }
+
+    public func add(builder: AppBuilder, name!: ?String = None, help!: ?String = None): This {
         ifSome(name, {n => builder.name(n)})
         ifSome(help, {h => builder.help(h)})
-
-        let subAppName = builder._name ?? throw IllegalArgumentException(
-            "Unable to bind the sub application without a name")
-        _subAppBuilders.add(subAppName, builder)
+        _subApps.add({=> builder.build()})
         this
     }
 
-    public func add(builder: CmdBuilder): AppBuilder {
-        _cmdBuilders.add(builder.getName(), builder)
+    public func add(command: Command): This {
+        _commands.add(command)
         this
     }
 
-    public operator func ()(argv: Array<String>): Nothing {
+    public func callback(callback: Callback): This {
+        _callback = callback
+        this
+    }
+
+    public func getCallback(): ?Callback {
+        _callback
+    }
+
+    public func buildAndRun(argv: Array<String>): Nothing {
+        // TODO: try catch app build errors
         let app = build()
-        app(argv)
+        app.run(argv)
     }
 }
-
-// cjlint-ignore -end
