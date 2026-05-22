@@ -2,7 +2,7 @@
 cjc-version = "1.0.5"
 name = "jian"
 description = "nothing here"
-version = "1.0.0"
+version = "0.1.0"
 target-dir = ""
 output-type = "dynamic"
 compile-option = ""
