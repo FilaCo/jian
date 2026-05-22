@@ -1,8 +1,8 @@
 package jian.builders
 
 import std.env.exit
-import std.collection.{ArrayList, map, collectArray, ReadOnlyMap}
-import jian.parsing.{ArgSpec, parseArgs}
+import std.collection.{ArrayList, ReadOnlyMap}
+import jian.parsing.parseArgs
 
 /**
  *
@@ -31,16 +31,10 @@ public struct App {
          * 3. if not found then give up
          */
         commands.get(firstArg).map {
-            cmd: Command => cmd.invoke(parseArgs(argv[1..], cmd.params.toArgSpec()))
+            cmd: Command => cmd.invoke(parseArgs(argv[1..], cmd.params.map {it => it.toArgSpec()}))
         } ?? subApps.get(firstArg).map {app => app.run(argv[1..])} ?? exit(1)
 
         exit(0)
-    }
-}
-
-extend Array<Param> {
-    func toArgSpec(): Array<ArgSpec> {
-        map { it => it.toArgSpec() } |> collectArray
     }
 }
 
