@@ -63,7 +63,7 @@ class LexerTest {
         let sut = Lexer.make(argv)
 
         // act
-        let actual = sut |> collectArray
+        let _ = sut |> collectArray
         let actualRemainder = sut.remainder()
 
         // assert
