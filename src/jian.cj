@@ -1,3 +1,3 @@
 package jian
 
-public import jian.builder.* // cjlint-ignore !G.PKG.01
+public import jian.builders.* // cjlint-ignore !G.PKG.01

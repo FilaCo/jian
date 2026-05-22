@@ -1,4 +1,4 @@
-package jian.builder
+package jian.builders
 
 import std.env.exit
 import std.collection.{collectHashMap, map, HashMap}

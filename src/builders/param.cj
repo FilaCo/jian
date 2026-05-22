@@ -1,4 +1,4 @@
-package jian.builder
+package jian.builders
 
 sealed abstract class Param {
     protected Param() {}

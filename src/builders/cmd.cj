@@ -1,4 +1,4 @@
-package jian.builder
+package jian.builders
 
 import std.collection.ArrayList
 import jian.parsing.ParsedArgs
