@@ -1,8 +1,6 @@
-protected package jian.core
+protected package jian.parsing
 
 import std.collection.collectArray
-import std.unittest.*
-import std.unittest.testmacro.*
 
 @Test
 class LexerTest {

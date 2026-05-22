@@ -9,7 +9,7 @@ protected package jian.macros.type_anno
  * TODO: add comments
  * throws UnsupportedException
  */
-public func Optional<T>(shortName!: ?Rune = None, longName!: ?String = None, help!: ?String = None): T {
+public func Optional<T>(shortName!: ?Rune = None, longName!: ?String = None, help!: ?String = None, default!: ?T = None): T {
     throw UnsupportedException(
         "Optional can appear only as an argument default value of function modified by the @Command or @Callback macro.")
 }

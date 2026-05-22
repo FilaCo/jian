@@ -1,8 +1,7 @@
 package jian.builder
 
-import std.argopt.{ArgumentParseException, parseArguments}
 import std.env.exit
-import std.collection.HashMap
+import std.collection.{collectHashMap, map, HashMap}
 
 /**
  * cjlint-ignore -start !G.OPR.01
@@ -13,39 +12,22 @@ import std.collection.HashMap
  *
  */
 public struct App {
-    App(private let _name: String, private let _help: ?String, private let _flags: AppFlags,
-        private let _commands: HashMap<String, Command>, private let _subApps: HashMap<String, App>,
-        private let _callback: ?Callback) {}
-
-    prop noArgsIsHelp: Bool {
-        get() {
-            _flags.noArgsIsHelp
-        }
-    }
+    App(private let _name: ?String, private let _help: ?String,
+        private let _cmds: HashMap<String, Cmd>, private let _subApps: HashMap<String, App>) {}
 
     public static func builder(): AppBuilder {
         AppBuilder()
     }
 
     public operator func ()(argv: Array<String>): Nothing {
-        if (argv.size == 0) {
-            if (noArgsIsHelp) {
-                // TODO: render help
-                exit(0)
-            }
-
-            // TODO: render error
-            exit(1)
-        }
-
-        let nonOptions = _callback.map {
-            cb => try {
-                parseArguments(argv, cb.argSpecs).nonOptions
-            } catch (e: ArgumentParseException) {
-                // TODO: render error
-                exit(1)
-            }
-        } ?? argv
+        // let nonOptions = _callback.map {
+        //     cb => try {
+        //         parseArguments(argv, cb.argSpecs).nonOptions
+        //     } catch (e: ArgumentParseException) {
+        //         // TODO: render error
+        //         exit(1)
+        //     }
+        // } ?? argv
 
         // let cmdOrApp = nonOptions[0]
         // /**  
@@ -116,101 +98,61 @@ public struct App {
 }
 
 public class AppBuilder {
-    // private var _name = None<String>
-    // private var _help = None<String>
-    // private var _noArgsIsHelp = false
-    // private var _invokeCallbackWithoutCommand = false
-    // private var _callback = None<Callback>
-    // private let _commandSpecs = HashMap<String, Command>()
-    // private let _subApps = HashMap<String, App>()
+    private var _name = None<String>
+    private var _help = None<String>
+    private let _cmdBuilders = HashMap<String, CmdBuilder>()
+    private let _subAppBuilders = HashMap<String, AppBuilder>()
 
-    // public func build(): App {
-    //     throw UnsupportedException()
-    // }
+    public func build(): App {
+        let commands = _cmdBuilders |> map {
+            item =>
+                let (name, cmdBuilder) = item
+                (name, cmdBuilder.build())
+        } |> collectHashMap
 
-    // public func name(v: String): AppBuilder
-    //     _name = v
-    //     this
-    // }
+        let subApps = _subAppBuilders |> map {
+            item =>
+                let (name, subAppBuilder) = item
+                (name, subAppBuilder.build())
+        } |> collectHashMap
 
-    // public func getName(): ?String {
-    //     _name
-    // }
+        App(_name, _help, commands, subApps)
+    }
 
-    // public func help(v: String): AppBuilder
-    //     _help = v
-    //     this
-    // }
+    public func name(name: String): This {
+        _name = name
+        this
+    }
 
-    // public func getHelp(): ?String {
-    //     _help
-    // }
+    public func help(help: String): AppBuilder {
+        _help = help
+        this
+    }
 
-    // public func noArgsIsHelp(v: Bool): AppBuilder
-    //     _noArgsIsHelp = v
-    //     this
-    // }
+    /**
+     * Adds sub application to the current application.
+     *
+     * throws IllegalArgumentException - if `name` and `builder.getName()` are both `None`
+     */
+    public func add(builder: AppBuilder, name!: ?String = None, help!: ?String = None): AppBuilder {
+        ifSome(name, {n => builder.name(n)})
+        ifSome(help, {h => builder.help(h)})
 
-    // public func getNoArgsIsHelp(): Bool {
-    //     _noArgsIsHelp
-    // }
+        let subAppName = builder._name ?? throw IllegalArgumentException(
+            "Unable to bind the sub application without a name")
+        _subAppBuilders.add(subAppName, builder)
+        this
+    }
 
-    // /**
-    //  * Adds sub application to the current application.
-    //  *
-    //  * throws IllegalArgumentException - if `name` and `builder.getName()` are both `None`
-    //  */
-    // public func add(builder: AppBuilder, name!: ?String = None, help!: ?String = None): AppBuilder
-    //     ifSome(name, {n => builder.name(n)})
-    //     ifSome(help, {h => builder.help(h)})
+    public func add(builder: CmdBuilder): AppBuilder {
+        _cmdBuilders.add(builder.getName(), builder)
+        this
+    }
 
-    //     let subAppName = builder.getName() ?? throw IllegalArgumentException(
-    //         "Unable to bind the sub application without a name")
-    //     _subApps.add(subAppName, builder.build())
-
-    //     this
-    // }
-
-    // public func add(command: Command): AppBuilder
-    //     _commandSpecs.add(command.name, command)
-    //     this
-    // }
-
-    // public func callback(v: Callback): AppBuilder
-    //     _callback = v
-    //     this
-    // }
-
-    // public operator func ()(argv: Array<String>): Nothing {
-    //     let app = build()
-    //     app(argv)
-    // }
+    public operator func ()(argv: Array<String>): Nothing {
+        let app = build()
+        app(argv)
+    }
 }
 
 // cjlint-ignore -end
-
-struct AppFlags {
-    protected static const NO_ARGS_IS_HELP_MASK: UInt8 = 1 << 0
-
-    AppFlags(private let _packed: UInt8) {}
-
-    prop noArgsIsHelp: Bool {
-        get() {
-            (_packed & NO_ARGS_IS_HELP_MASK) > 0
-        }
-    }
-}
-
-class AppFlagsBuilder {
-    private var _packed: UInt8 = 0
-
-    func build(): AppFlags {
-        AppFlags(_packed)
-    }
-
-    func withNoArgsIsHelp(): This {
-        _packed |= AppFlags.NO_ARGS_IS_HELP_MASK
-
-        this
-    }
-}

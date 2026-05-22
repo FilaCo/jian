@@ -1,4 +1,4 @@
-protected package jian.core
+protected package jian.parsing
 
 import std.deriving.*
 
