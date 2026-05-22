@@ -1,7 +1,8 @@
 package jian.builders
 
 import std.env.exit
-import std.collection.{ArrayList, HashMap, ReadOnlyMap}
+import std.collection.{ArrayList, map, collectArray, ReadOnlyMap}
+import jian.parsing.{ArgSpec, parseArgs}
 
 /**
  *
@@ -16,80 +17,30 @@ public struct App {
     }
 
     public func run(argv: Array<String>): Nothing {
-        // let nonOptions = _callback.map {
-        //     cb => try {
-        //         parseArguments(argv, cb.argSpecs).nonOptions
-        //     } catch (e: ArgumentParseException) {
-        //         // TODO: render error
-        //         exit(1)
-        //     }
-        // } ?? argv
-
-        // let cmdOrApp = nonOptions[0]
-        // /**  
-        //  * command or sub app call:
-        //  * 1. lookup commands
-        //  * 2. if not found then lookup subapps
-        //  * 3. if not found then give up
-        //  */
-        // match (_commands.get(cmdOrApp)) {
-        //     case Some(cmd) =>
-        //         ifSome(
-        //             _callback,
-        //             {
-        //                 cb =>
-        //                     let cbArgs = try {
-        //                         parseArguments(argv, cb.argSpecs)
-        //                     } catch (e: ArgumentParseException) {
-        //                         // TODO: render error
-        //                         exit(1)
-        //                     }
-        //                     cb(cbArgs)
-        //             }
-        //         )
-        //         let cmdArgs = try {
-        //             parseArguments(argv[1..], cmd.argSpecs)
-        //         } catch (e: ArgumentParseException) {
-        //             // TODO: render error
-        //             exit(1)
-        //         }
-        //         cmd(cmdArgs)
-        //     case _ => match (_subApps.get(cmdOrApp)) {
-        //         case Some(app) =>
-        //             ifSome(
-        //                 _callback,
-        //                 {
-        //                     cb =>
-        //                         let cbArgs = try {
-        //                             parseArguments(argv, cb.argSpecs)
-        //                         } catch (e: ArgumentParseException) {
-        //                             // TODO: render error
-        //                             exit(1)
-        //                         }
-        //                         cb(cbArgs)
-        //                 }
-        //             )
-        //             app(argv[1..])
-
-        //         case _ => match (_callback) {
-        //             case Some(cb) where cb.invokeWithoutCommand =>
-        //                 let cbArgs = try {
-        //                     parseArguments(argv, cb.argSpecs)
-        //                 } catch (e: ArgumentParseException) {
-        //                     // TODO: render error
-        //                     exit(1)
-        //                 }
-        //                 cb(cbArgs)
-
-        //             case None | Some(cb) where !cb.invokeWithoutCommand => 
-        //                 // TODO: render error
-        //                 exit(1)
-
-        //         }
-        //     }
-        // }
+        if (argv.size == 0) {
+            throw UnsupportedException()
+        }
+        let firstArg = argv[0]
+        if (firstArg.startsWith("-")) {
+            throw UnsupportedException()
+        }
+        /**  
+         * command or sub app call:
+         * 1. lookup commands
+         * 2. if not found then lookup sub apps
+         * 3. if not found then give up
+         */
+        commands.get(firstArg).map {
+            cmd: Command => cmd.invoke(parseArgs(argv[1..], cmd.params.toArgSpec()))
+        } ?? subApps.get(firstArg).map {app => app.run(argv[1..])} ?? exit(1)
 
         exit(0)
+    }
+}
+
+extend Array<Param> {
+    func toArgSpec(): Array<ArgSpec> {
+        map { it => it.toArgSpec() } |> collectArray
     }
 }
 

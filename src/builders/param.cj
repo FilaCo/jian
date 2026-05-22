@@ -1,5 +1,7 @@
 package jian.builders
 
+import jian.parsing.{ArgSpec, OptSpec, PosSpec}
+
 sealed abstract class Param <: Equatable<Param> {
     Param(public let name!: String, public let help!: ?String = None) {}
 
@@ -10,17 +12,27 @@ sealed abstract class Param <: Equatable<Param> {
     public operator func ==(other: Param): Bool {
         name == other.name
     }
+
+    protected func toArgSpec(): ArgSpec
 }
 
 public class Opt <: Param {
     Opt(name!: String, help!: ?String = None, public let short!: ?Byte = None, public let long!: ?String = None) {
         super(name: name, help: help)
     }
+
+    protected func toArgSpec(): OptSpec {
+        throw Exception()
+    }
 }
 
 public class Pos <: Param {
     Pos(name!: String, help!: ?String = None) {
         super(name: name, help: help)
+    }
+
+    protected func toArgSpec(): PosSpec {
+        throw Exception()
     }
 }
 
