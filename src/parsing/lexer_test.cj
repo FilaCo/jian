@@ -1,4 +1,4 @@
-protected package jian.parsing
+package jian.parsing
 
 import std.collection.collectArray
 
