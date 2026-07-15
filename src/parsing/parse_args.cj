@@ -1,4 +1,4 @@
-package jian.parsing
+protected package jian.parsing
 
 import std.collection.{ArrayList, HashMap}
 import std.convert.Parsable
@@ -10,7 +10,7 @@ sealed abstract class ArgSpec {
 }
 
 public class OptSpec <: ArgSpec {
-    OptSpec(name!: String, help!: ?String = None,
+    protected OptSpec(name!: String, help!: ?String = None,
             public let short!: ?Byte = None,
             public let long!: ?String = None,
             public let defaultValue!: ?String = None) {
@@ -22,12 +22,8 @@ public class OptSpec <: ArgSpec {
     }
 }
 
-public func newOptSpec(name: String, help: ?String, short: ?Byte, long: ?String, defaultValue: ?String): OptSpec {
-    OptSpec(name: name, help: help, short: short, long: long, defaultValue: defaultValue)
-}
-
 public class PosSpec <: ArgSpec {
-    PosSpec(name!: String, help!: ?String = None,
+    protected PosSpec(name!: String, help!: ?String = None,
             public let defaultValue!: ?String = None) {
         super(name: name, help: help)
     }
@@ -37,18 +33,10 @@ public class PosSpec <: ArgSpec {
     }
 }
 
-public func newPosSpec(name: String, help: ?String, defaultValue: ?String): PosSpec {
-    PosSpec(name: name, help: help, defaultValue: defaultValue)
-}
-
 // === ParsedArgs ===
 
 public struct ParsedArgs {
-    private let store: HashMap<String, String>
-
-    init(store: HashMap<String, String>) {
-        this.store = store
-    }
+    ParsedArgs(private let store: HashMap<String, String>) {}
 
     public func getRaw(name: String): ?String {
         store.get(name)
@@ -59,8 +47,8 @@ public struct ParsedArgs {
         T.parse(raw)
     }
 
-    public func getOr<T>(name: String, defaultVal: T): T where T <: Parsable<T> {
-        store.get(name).map { raw => T.parse(raw) } ?? defaultVal
+    public func getOr<T>(name: String, defaultValue: T): T where T <: Parsable<T> {
+        store.get(name).map { raw => T.parse(raw) } ?? defaultValue
     }
 }
 
@@ -73,7 +61,6 @@ protected func parseArgs(argv: Array<String>, specs: Array<ArgSpec>): ParsedArgs
     let optsByShort = HashMap<Byte, OptSpec>()
     let posSpecs = ArrayList<PosSpec>()
 
-    // --- Build lookup structures ---
     for (spec in specs) {
         match (spec) {
             case opt: OptSpec =>
@@ -88,7 +75,6 @@ protected func parseArgs(argv: Array<String>, specs: Array<ArgSpec>): ParsedArgs
         }
     }
 
-    // --- Apply defaults for options ---
     for (spec in specs) {
         match (spec) {
             case opt: OptSpec =>
@@ -99,7 +85,6 @@ protected func parseArgs(argv: Array<String>, specs: Array<ArgSpec>): ParsedArgs
         }
     }
 
-    // --- Parse tokens ---
     var posIndex: Int64 = 0
 
     for (tok in lexer) {
@@ -147,7 +132,6 @@ protected func parseArgs(argv: Array<String>, specs: Array<ArgSpec>): ParsedArgs
         }
     }
 
-    // --- Apply defaults for positionals not set ---
     for (i in posIndex..posSpecs.size) {
         let pos = posSpecs[i]
         if (store.get(pos.name).isNone() && pos.hasDefault()) {

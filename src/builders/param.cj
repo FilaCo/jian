@@ -1,6 +1,6 @@
 package jian.builders
 
-import jian.parsing.{ArgSpec, OptSpec, PosSpec, newOptSpec, newPosSpec}
+import jian.parsing.{ArgSpec, OptSpec, PosSpec}
 
 sealed abstract class Param <: Equatable<Param> {
     Param(public let name!: String, public let help!: ?String = None) {}
@@ -18,22 +18,22 @@ sealed abstract class Param <: Equatable<Param> {
 
 public class Opt <: Param {
     Opt(name!: String, help!: ?String = None, public let short!: ?Byte = None, public let long!: ?String = None,
-        public let defaultv!: ?String = None) {
+        public let defaultValue!: ?String = None) {
         super(name: name, help: help)
     }
 
     protected func toArgSpec(): OptSpec {
-        newOptSpec(this.name, this.help, this.short, this.long, this.defaultv)
+        OptSpec(name: name, help: help, short: short, long: long, defaultValue: defaultValue)
     }
 }
 
 public class Pos <: Param {
-    Pos(name!: String, help!: ?String = None, public let defaultv!: ?String = None) {
+    Pos(name!: String, help!: ?String = None, public let defaultValue!: ?String = None) {
         super(name: name, help: help)
     }
 
     protected func toArgSpec(): PosSpec {
-        newPosSpec(name, help, defaultv)
+        PosSpec(name: name, help: help, defaultValue: defaultValue)
     }
 }
 
@@ -41,16 +41,16 @@ public class ParamBuilder {
     private var _help = None<String>
     private var _short = None<Byte>
     private var _long = None<String>
-    private var _default = None<String>
+    private var _defaultValue = None<String>
 
     ParamBuilder(private var _name: String) {}
 
     public func build(): Param {
         match ((_short, _long)) {
-            case (Some(s), Some(l)) => Opt(name: getName(), help: getHelp(), short: s, long: l, defaultv: getDefaultVal())
-            case (Some(s), None) => Opt(name: getName(), help: getHelp(), short: s, defaultv: getDefaultVal())
-            case (None, Some(l)) => Opt(name: getName(), help: getHelp(), long: l, defaultv: getDefaultVal())
-            case _ => Pos(name: getName(), help: getHelp(), defaultv: getDefaultVal())
+            case (Some(s), Some(l)) => Opt(name: getName(), help: getHelp(), short: s, long: l, defaultValue: getDefaultValue())
+            case (Some(s), None) => Opt(name: getName(), help: getHelp(), short: s, defaultValue: getDefaultValue())
+            case (None, Some(l)) => Opt(name: getName(), help: getHelp(), long: l, defaultValue: getDefaultValue())
+            case _ => Pos(name: getName(), help: getHelp(), defaultValue: getDefaultValue())
         }
     }
 
@@ -90,12 +90,12 @@ public class ParamBuilder {
         _long
     }
 
-    public func defaultVal(defaultVal: String): This {
-        _default = defaultVal
+    public func defaultValue(defaultValue: String): This {
+        _defaultValue = defaultValue
         this
     }
 
-    public func getDefaultVal(): ?String {
-        _default
+    public func getDefaultValue(): ?String {
+        _defaultValue
     }
 }
