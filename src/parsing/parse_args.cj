@@ -3,13 +3,11 @@ protected package jian.parsing
 import std.collection.{ArrayList, HashMap}
 import std.convert.Parsable
 
-// === ArgSpec hierarchy ===
-
 sealed abstract class ArgSpec {
     ArgSpec(public let name!: String, public let help!: ?String = None) {}
 }
 
-public class OptSpec <: ArgSpec {
+protected class OptSpec <: ArgSpec {
     protected OptSpec(name!: String, help!: ?String = None,
             public let short!: ?Byte = None,
             public let long!: ?String = None,
@@ -22,7 +20,7 @@ public class OptSpec <: ArgSpec {
     }
 }
 
-public class PosSpec <: ArgSpec {
+protected class PosSpec <: ArgSpec {
     protected PosSpec(name!: String, help!: ?String = None,
             public let defaultValue!: ?String = None) {
         super(name: name, help: help)
@@ -32,8 +30,6 @@ public class PosSpec <: ArgSpec {
         defaultValue.isSome()
     }
 }
-
-// === ParsedArgs ===
 
 public struct ParsedArgs {
     ParsedArgs(private let store: HashMap<String, String>) {}
@@ -51,8 +47,6 @@ public struct ParsedArgs {
         store.get(name).map { raw => T.parse(raw) } ?? defaultValue
     }
 }
-
-// === Parser ===
 
 protected func parseArgs(argv: Array<String>, specs: Array<ArgSpec>): ParsedArgs {
     let lexer = Lexer.make(argv)
