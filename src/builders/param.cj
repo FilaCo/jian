@@ -17,22 +17,23 @@ sealed abstract class Param <: Equatable<Param> {
 }
 
 public class Opt <: Param {
-    Opt(name!: String, help!: ?String = None, public let short!: ?Byte = None, public let long!: ?String = None) {
+    Opt(name!: String, help!: ?String = None, public let short!: ?Byte = None, public let long!: ?String = None,
+        public let defaultValue!: ?String = None) {
         super(name: name, help: help)
     }
 
     protected func toArgSpec(): OptSpec {
-        throw Exception()
+        OptSpec(name: name, help: help, short: short, long: long, defaultValue: defaultValue)
     }
 }
 
 public class Pos <: Param {
-    Pos(name!: String, help!: ?String = None) {
+    Pos(name!: String, help!: ?String = None, public let defaultValue!: ?String = None) {
         super(name: name, help: help)
     }
 
     protected func toArgSpec(): PosSpec {
-        throw Exception()
+        PosSpec(name: name, help: help, defaultValue: defaultValue)
     }
 }
 
@@ -40,15 +41,16 @@ public class ParamBuilder {
     private var _help = None<String>
     private var _short = None<Byte>
     private var _long = None<String>
+    private var _defaultValue = None<String>
 
     ParamBuilder(private var _name: String) {}
 
     public func build(): Param {
         match ((_short, _long)) {
-            case (Some(s), Some(l)) => Opt(name: getName(), help: getHelp(), short: s, long: l)
-            case (Some(s), None) => Opt(name: getName(), help: getHelp(), short: s)
-            case (None, Some(l)) => Opt(name: getName(), help: getHelp(), long: l)
-            case _ => Pos(name: getName(), help: getHelp())
+            case (Some(s), Some(l)) => Opt(name: getName(), help: getHelp(), short: s, long: l, defaultValue: getDefaultValue())
+            case (Some(s), None) => Opt(name: getName(), help: getHelp(), short: s, defaultValue: getDefaultValue())
+            case (None, Some(l)) => Opt(name: getName(), help: getHelp(), long: l, defaultValue: getDefaultValue())
+            case _ => Pos(name: getName(), help: getHelp(), defaultValue: getDefaultValue())
         }
     }
 
@@ -86,5 +88,14 @@ public class ParamBuilder {
 
     public func getLong(): ?String {
         _long
+    }
+
+    public func defaultValue(defaultValue: String): This {
+        _defaultValue = defaultValue
+        this
+    }
+
+    public func getDefaultValue(): ?String {
+        _defaultValue
     }
 }
