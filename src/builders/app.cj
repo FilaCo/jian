@@ -1,8 +1,8 @@
 package jian.builders
 
 import std.env.exit
-import std.collection.{ArrayList, ReadOnlyMap}
-import jian.parsing.parseArgs
+import std.collection.{ArrayList, HashMap, ReadOnlyMap}
+import jian.parsing.{parseArgs, ParsedArgs}
 
 /**
  *
@@ -18,21 +18,26 @@ public struct App {
 
     public func run(argv: Array<String>): Nothing {
         if (argv.size == 0) {
-            throw UnsupportedException()
+            let emptyArgs = ParsedArgs()
+            if (let Some(cb) <- callback) {
+                cb.invoke(emptyArgs)
+            }
+            exit(0)
         }
+
         let firstArg = argv[0]
         if (firstArg.startsWith("-")) {
-            throw UnsupportedException()
+            callback.map { cb => cb.invoke(parseArgs(argv, cb.params.map { it => it.toArgSpec() })) }
+            exit(0)
         }
-        /**  
-         * command or sub app call:
-         * 1. lookup commands
-         * 2. if not found then lookup sub apps
-         * 3. if not found then give up
-         */
-        commands.get(firstArg).map {
-            cmd: Command => cmd.invoke(parseArgs(argv[1..], cmd.params.map {it => it.toArgSpec()}))
-        } ?? subApps.get(firstArg).map {app => app.run(argv[1..])} ?? exit(1)
+
+        // command or sub app dispatch:
+        // 1. lookup commands
+        // 2. if not found then lookup sub apps
+        // 3. if not found then give up
+        commands.get(firstArg).map { c => c.invoke(parseArgs(argv[1..], c.params.map { it => it.toArgSpec() })) } ??
+            subApps.get(firstArg).map { app => app.run(argv[1..]) } ??
+            exit(1)
 
         exit(0)
     }
@@ -46,8 +51,22 @@ public class AppBuilder {
     private var _callback = None<Callback>
 
     public func build(): App {
-        throw Exception()
-        // App(name: getName(), help: getHelp(), commands: getCommands(), subApps: getSubApps())
+        let cmdMap = HashMap<String, Command>()
+        for (cmd in _commands) {
+            cmdMap[cmd.name] = cmd
+        }
+
+        let subAppMap = HashMap<String, App>()
+        for (factory in _subApps) {
+            let app = factory()
+            if (let Some(n) <- app.name) {
+                subAppMap[n] = app
+            }
+        }
+
+        App(name: getName(), help: getHelp(),
+            commands: cmdMap, subApps: subAppMap,
+            callback: getCallback())
     }
 
     public func name(name: String): This {
