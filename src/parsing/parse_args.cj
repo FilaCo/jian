@@ -34,6 +34,10 @@ protected class PosSpec <: ArgSpec {
 public struct ParsedArgs {
     ParsedArgs(private let store: HashMap<String, String>) {}
 
+    protected init() {
+        this(HashMap<String, String>())
+    }
+
     public func getRaw(name: String): ?String {
         store.get(name)
     }

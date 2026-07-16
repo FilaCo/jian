@@ -27,7 +27,7 @@ class ParamTest {
         let lhs = Param.builder("test").long("first").short(b'f').help("first param").build()
         let rhs = Param.builder("test").long("second").short(b's').help("second param").build()
         
-        // arrange
+        // assert
         @Expect(lhs, rhs)
     }
 }
