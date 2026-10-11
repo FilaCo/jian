@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash",
+            "args": [
+              "-c",
+              "[ -f \"$HOME/.cangjie/envsetup.sh\" ] && [ -n \"$CLAUDE_ENV_FILE\" ] || exit 0; source \"$HOME/.cangjie/envsetup.sh\" >/dev/null 2>&1; for v in CANGJIE_HOME PATH LD_LIBRARY_PATH DYLD_FALLBACK_LIBRARY_PATH SDKROOT; do if [ -n \"${!v+x}\" ]; then printf \"export %s=%q\\n\" \"$v\" \"${!v}\"; fi; done >> \"$CLAUDE_ENV_FILE\""
+            ],
+            "statusMessage": "Loading the Cangjie SDK environment"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prune-merged-worktrees.sh",
+            "async": true,
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}

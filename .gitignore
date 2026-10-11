@@ -3,3 +3,9 @@
 node_modules
 target
 *.macrocall
+lib-macro_*.dylib
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/agents/
+!.claude/skills/
