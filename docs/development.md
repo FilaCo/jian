@@ -51,7 +51,7 @@ runtime contract from a consumer package as well.
 
 Use Conventional Commits (`type(scope): subject`); breaking changes use `!` or a
 `BREAKING CHANGE:` footer. Target `master`. `.githooks/commit-msg` calls
-`cog verify`; `.githooks/pre-push` checks whitespace, builds and runs unit tests.
+`cog verify`; `.githooks/pre-push` checks whitespace and runs unit tests.
 Run any macro consumer checks appropriate to the change before review.
 The GitHub workflow checks the PR's commits and title, including title edits.
 

@@ -2,5 +2,4 @@
 set -eu
 
 git diff --check
-cjpm build
 cjpm test --target-dir target/test
