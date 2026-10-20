@@ -94,8 +94,10 @@ public class ArgCursor {
         result
     }
 
-    // Compute the next state without committing it: lookahead cannot classify a
-    // required raw value irreversibly, nor consume a marker or part of a cluster.
+    /**
+     * Computes the next state without committing it: lookahead cannot classify a
+     * required raw value irreversibly, nor consume a marker or part of a cluster.
+     */
     private func read(): (?Arg, Int64, Int64, Bool) {
         var index = position
         var ended = optionsEnded
