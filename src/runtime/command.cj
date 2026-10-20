@@ -2,15 +2,16 @@ package jian.runtime
 
 /**
  * A subcommand of an `App`: what `@Command` generates for a function.
- *
- * Part of the macro's API: generated code implements it, users add instances with
- * `App.add`. Tests implement it by hand.
  */
 public interface Command {
-    /** The name the command is called by on the command line, e.g. `sync-all`. */
+    /**
+     * The name the command is called by on the command line, e.g. `sync-all`.
+     */
     prop name: String
 
-    /** Everything help and usage need to know about the command. */
+    /**
+     * Everything help and usage need to know about the command.
+     */
     prop spec: CommandSpec
 
     /**
@@ -27,7 +28,9 @@ public interface Command {
  * `run` reads the options up to the subcommand's name and leaves the rest in `args`.
  */
 public interface Callback {
-    /** Everything help and usage need to know about the app-level options. */
+    /**
+     * Everything help and usage need to know about the app-level options.
+     */
     prop spec: CommandSpec
 
     /**

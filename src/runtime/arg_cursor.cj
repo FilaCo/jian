@@ -1,27 +1,29 @@
 package jian.runtime
 
-/** One argument as `ArgCursor` reads it. */
+/**
+ * One argument as `ArgCursor` reads it.
+ */
 public enum Arg {
-    | LongOption(String, ?String) // `--name` or `--name=value`: the name without dashes, the value after `=`.
-    | ShortOption(Rune, ?String) // `-n`, a letter of a cluster `-abc`; the value if `n` takes one (`-n=v`, `-nv`, `-n v`).
-    | Operand(String) // A positional argument: anything else, `-` and everything after `--`.
+    /**
+     * `--name`, `--name value` or `--name=value`.
+     */
+    | Long(/* name */String, /* value */?String)
+    /**
+     * `-n`, `-n=v`, `-n v` or `-abc`.
+     */
+    | Short(/* a letter or cluster */String, /* value */?String)
+    /**
+     * `anything`, `-` and everything after `--`.
+     */
+    | Positional(String)
 }
 
 /**
  * Reads a command line one argument at a time: a pure function of `argv` and of which
  * short options take a value (without that, `-tv3` cannot be told from `-t v3`).
- *
- * Part of the macro's API: the generated `Command.run` reads its parameters from it.
- * The bodies come in #12.
  */
 public class ArgCursor {
-    private let argv: Array<String>
-    private let shortsTakingValue: Array<Rune>
-
-    public init(argv: Array<String>, shortsTakingValue!: Array<Rune> = []) {
-        this.argv = argv
-        this.shortsTakingValue = shortsTakingValue
-    }
+    public ArgCursor(private let argv: Array<String>, private let shortsTakingValue!: Array<Byte> = []) {}
 
     /**
      * The next argument without consuming it; `None` at the end.
@@ -50,7 +52,9 @@ public class ArgCursor {
         throw UnsupportedException("ArgCursor.nextValue(${option}): not implemented yet")
     }
 
-    /** The arguments not consumed yet, as given: what `App` hands its subcommand. */
+    /**
+     * The arguments not consumed yet, as given: what `App` hands its subcommand.
+     */
     public func remaining(): Array<String> {
         throw UnsupportedException("ArgCursor.remaining: not implemented yet")
     }

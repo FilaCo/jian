@@ -4,21 +4,21 @@ import std.collection.collectArray
 
 @Test
 class LexerTest {
-    @TestCase[input in [ 
+    @TestCase[input in [
 (
- [ "cjpm", "init", "--name", "jian", "--type=dynamic" ], 
- [ Value("cjpm"), Value("init"), DoubleDashed("name"), Value("jian"), DoubleDashed("type", "dynamic") ] 
-), 
- 
+ [ "cjpm", "init", "--name", "jian", "--type=dynamic" ],
+ [ Value("cjpm"), Value("init"), DoubleDashed("name"), Value("jian"), DoubleDashed("type", "dynamic") ]
+),
+
 (
- [ "cjc", "-", "--output-type=exe", "--output-dir", "whatever" ], 
- [ Value("cjc"), StdinPlaceholder, DoubleDashed("output-type", "exe"), DoubleDashed("output-dir"), Value("whatever") ] 
-), 
- 
+ [ "cjc", "-", "--output-type=exe", "--output-dir", "whatever" ],
+ [ Value("cjc"), StdinPlaceholder, DoubleDashed("output-type", "exe"), DoubleDashed("output-dir"), Value("whatever") ]
+),
+
 (
- [ "cjdev", "exec", "--", "ls", "-la" ], 
- [ Value("cjdev"), Value("exec") ] 
-), 
+ [ "cjdev", "exec", "--", "ls", "-la" ],
+ [ Value("cjdev"), Value("exec") ]
+),
  ]]
     func itWorks(input: (Array<String>, Array<Token>)) {
         // arrange
@@ -31,31 +31,31 @@ class LexerTest {
         @PowerAssert(expected == actual)
     }
 
-    @TestCase[input in [ 
+    @TestCase[input in [
 (
- [ ], 
- [ ] 
-), 
+ [ ],
+ [ ]
+),
 (
- [ "no", "escape", "arg" ], 
- [ ] 
-), 
+ [ "no", "escape", "arg" ],
+ [ ]
+),
 (
- [ "escape", "arg", "in", "the", "end", "--" ], 
- [ ] 
-), 
+ [ "escape", "arg", "in", "the", "end", "--" ],
+ [ ]
+),
 (
- [ "cargo", "run", "--", "-h" ], 
- [ "-h" ] 
-), 
+ [ "cargo", "run", "--", "-h" ],
+ [ "-h" ]
+),
 (
- [ "--" ], 
- [  ] 
-), 
+ [ "--" ],
+ [  ]
+),
 (
- [ "--", "--", "--" ], 
- [ "--", "--" ] 
-), 
+ [ "--", "--", "--" ],
+ [ "--", "--" ]
+),
  ]]
     func remainderWorks(input: (Array<String>, Array<String>)) {
         // arrange

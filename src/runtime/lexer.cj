@@ -3,9 +3,11 @@ package jian.runtime
 import std.deriving.*
 
 class Lexer <: Iterable<Token> {
-    private var pos = 0
-    private var cur = Dummy
-    private Lexer(private let argv: Array<String>) {}
+    private Lexer(
+        private let argv: Array<String>,
+        private var pos!: Int64 = 0,
+        private var cur!: Token = Dummy
+    ) {}
 
     static func make(argv: Array<String>): Lexer {
         let lexer = Lexer(argv)
@@ -102,12 +104,20 @@ class TokenIterator <: Iterator<Token> {
 
 @Derive[Equatable, ToString]
 enum Token {
-    | StdinPlaceholder // `-`.
-    | Dashed(String) // Dashed option, e.g. `-f` or `-vvv`.
-    | Dashed(String, String) // Dashed option with associated value, e.g. `-f=123`.
-    | DoubleDashed(String) // Double dashed option, e.g. `--foo`.
-    | DoubleDashed(String, String) // Double dashed option with associated value, e.g. `--foo=bar`.
-    | Value(String) // Just a value, e.g. `boo`.
-    | Eoi // End of input. Lexer emits this token if it reaches the end of input or the `--` value.
-    | Dummy // Dummy placeholder for parsing needs.
+    // `-`.
+    | StdinPlaceholder
+    // Dashed option, e.g. `-f` or `-vvv`.
+    | Dashed(String)
+    // Dashed option with associated value, e.g. `-f=123`.
+    | Dashed(String, String)
+    // Double dashed option, e.g. `--foo`.
+    | DoubleDashed(String)
+    // Double dashed option with associated value, e.g. `--foo=bar`.
+    | DoubleDashed(String, String)
+    // Just a value, e.g. `boo`.
+    | Value(String)
+    // End of input. Lexer emits this token if it reaches the end of input or the `--` value.
+    | Eoi
+    // Dummy placeholder for parsing needs.
+    | Dummy
 }
