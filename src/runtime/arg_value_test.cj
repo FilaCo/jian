@@ -5,8 +5,8 @@ import std.math.MaxMinValue
 import std.reflect.TypeInfo
 import std.unittest.prop_test.{Arbitrary, random}
 
-// An alias is intentional: CLI behavior must follow the underlying type.
-type OptionalInt64 = ?Int64
+// The command macro sees only the alias name; CLI behavior must still follow the underlying type.
+type MaybeInt = ?Int64
 
 // This SDK resolves static extension members on aliases through a generic constraint.
 private func absentAs<T>(): ?T where T <: ArgValue<T> { T.whenAbsent() }
@@ -75,15 +75,15 @@ class ArgValueTest {
     @TestCase
     func aliasesUseTheUnderlyingOptionalBehavior() {
         // arrange
-        let previous: ?OptionalInt64 = Some(Some(7))
+        let previous: ?MaybeInt = Some(Some(7))
 
         // act
-        let value = acceptAs<OptionalInt64>(previous, Some("42"))
+        let value = acceptAs<MaybeInt>(previous, Some("42"))
 
         // assert
         @Expect(value, Some(42))
-        @Expect(absentAs<OptionalInt64>(), Some(None))
-        @Expect(acceptAs<Array<OptionalInt64>>(None, Some("3")), [Some(3)])
+        @Expect(absentAs<MaybeInt>(), Some(None))
+        @Expect(acceptAs<Array<MaybeInt>>(None, Some("3")), [Some(3)])
     }
 
     @TestCase
