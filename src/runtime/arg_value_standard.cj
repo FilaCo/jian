@@ -3,15 +3,29 @@ package jian.runtime
 import jian.runtime.macros.ArgValues
 import std.fs.Path
 
-// Paths remain textual; a bare boolean flag means true.
 @ArgValues(
-    (String, "TEXT", true, None, requiredValue(raw)),
-    (Path, "PATH", true, None, Path(requiredValue(raw))),
-    (Bool, "", false, Some(false), if (raw.isNone()) { true } else { parseValue<Bool>(raw, "Bool") })
+    value<String>(metavar: "TEXT", accept: requiredValue(raw)),
+    // Paths remain textual without checking the filesystem.
+    value<Path>(metavar: "PATH", accept: Path(requiredValue(raw))),
+    value<Bool>(
+        takesValue: false,
+        whenAbsent: Some(false),
+        accept: if (raw.isNone()) { true } else { parseValue<Bool>(raw, "Bool") }
+    )
 )
 
-// Each array occurrence starts a new element; only the outer array accumulates.
 @ArgValues[T](
-    (Option<T>, T.metavar(), T.takesValue(), Some(None), Some(T.accept(prev ?? None, raw))),
-    (Array<T>, T.metavar() + "...", T.takesValue(), Some([]), (prev ?? []).concat([T.accept(None, raw)]))
+    value<Option<T>>(
+        metavar: T.metavar(),
+        takesValue: T.takesValue(),
+        whenAbsent: Some(None),
+        accept: Some(T.accept(prev ?? None, raw))
+    ),
+    value<Array<T>>(
+        metavar: T.metavar() + "...",
+        takesValue: T.takesValue(),
+        whenAbsent: Some([]),
+        // Each occurrence starts a new element; only the outer array accumulates.
+        accept: (prev ?? []).concat([T.accept(None, raw)])
+    )
 )

@@ -1,11 +1,12 @@
 macro package jian.runtime.macros
 
 import std.ast.*
-import std.collection.ArrayList
+import std.collection.HashMap
 
 /**
- * Generates extensions from rows of (type, metavar, takesValue, whenAbsent, accept).
- * The accept expression can use `raw`.
+ * Generates ArgValue extensions from `value<Types...>(metavar: ..., accept: ...)` entries.
+ * Defaults: takesValue is true, whenAbsent is None, accept uses Parsable, metavar is empty.
+ * The accept expression can use `raw`; a group shares its settings across all listed types.
  */
 public macro ArgValues(input: Tokens): Tokens {
     argValues(input, quote(extend), Tokens(), quote(_))
@@ -27,36 +28,42 @@ func argValues(input: Tokens, header: Tokens, constraint: Tokens, previous: Toke
             position++
             continue
         }
-        if (input[position].kind != TokenKind.LPAREN) {
-            throw ASTException("ArgValues expects rows of (type, metavar, takesValue, whenAbsent, accept)")
+        let (expression, end) = parseExprFragment(input, startFrom: position)
+        position = end
+        let entry = CallExpr(expression.toTokens())
+        let types = RefExpr(entry.callFunc.toTokens())
+        if (types.identifier.value != "value" || types.typeArguments.isEmpty()) {
+            throw ASTException("ArgValues expects value<Types...>(named settings)")
         }
-        let (typeNode, typeEnd) = parseTypeFragment(input, startFrom: position + 1)
-        let valueType = typeNode.toTokens()
-        position = typeEnd
-        let values = ArrayList<Expr>()
-        // Parse the type separately: primitive type names are not tuple value expressions.
-        for (_ in 0..4) {
-            if (input[position].kind != TokenKind.COMMA) {
-                throw ASTException("ArgValues expects five columns per row")
+        let settings = HashMap<String, Tokens>()
+        for (argument in entry.arguments) {
+            let name = argument.identifier.value
+            if (!["metavar", "takesValue", "whenAbsent", "accept"].contains(name)) {
+                throw ASTException("unknown ArgValues setting '${name}'")
             }
-            let (expression, end) = parseExprFragment(input, startFrom: position + 1)
-            values.add(expression)
-            position = end
+            if (settings.contains(name)) {
+                throw ASTException("duplicate ArgValues setting '${name}'")
+            }
+            settings.add(name, argument.expr.toTokens())
         }
-        if (input[position].kind != TokenKind.RPAREN) {
-            throw ASTException("ArgValues expects five columns per row")
-        }
-        position++
-        output = output + quote(
-            $(header) $(valueType) <: ArgValue<$(valueType)> $(constraint) {
-                public static func metavar(): String { $(values[0]) }
-                public static func takesValue(): Bool { $(values[1]) }
-                public static func whenAbsent(): ?$(valueType) { $(values[2]) }
-                public static func accept($(previous): ?$(valueType), raw: ?String): $(valueType) {
-                    $(values[3])
+        let metavar = settings.get("metavar") ?? quote("")
+        let takesValue = settings.get("takesValue") ?? quote(true)
+        let whenAbsent = settings.get("whenAbsent") ?? quote(None)
+        for (typeNode in types.typeArguments) {
+            let valueType = typeNode.toTokens()
+            let expected = Token(TokenKind.STRING_LITERAL, valueType.toString())
+            let accept = settings.get("accept") ?? quote(parseValue<$(valueType)>(raw, $(expected)))
+            output = output + quote(
+                $(header) $(valueType) <: ArgValue<$(valueType)> $(constraint) {
+                    public static func metavar(): String { $(metavar) }
+                    public static func takesValue(): Bool { $(takesValue) }
+                    public static func whenAbsent(): ?$(valueType) { $(whenAbsent) }
+                    public static func accept($(previous): ?$(valueType), raw: ?String): $(valueType) {
+                        $(accept)
+                    }
                 }
-            }
-        )
+            )
+        }
     }
     output
 }

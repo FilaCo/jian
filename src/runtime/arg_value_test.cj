@@ -135,6 +135,25 @@ class ArgValueTest {
     }
 
     @TestCase
+    func nativeIntegersAcceptTheirBoundsAndRejectOverflow() {
+        // arrange
+        let minimum = IntNative.Min.toString()
+        let maximum = IntNative.Max.toString()
+        let unsignedMaximum = UIntNative.Max.toString()
+        // act
+        let low = acceptAs<IntNative>(None, Some(minimum))
+        let high = acceptAs<IntNative>(None, Some(maximum))
+        let unsignedHigh = acceptAs<UIntNative>(None, Some(unsignedMaximum))
+        // assert
+        @Expect(low, IntNative.Min)
+        @Expect(high, IntNative.Max)
+        @Expect(unsignedHigh, UIntNative.Max)
+        expectInvalid<IntNative>(minimum + "0", "IntNative")
+        expectInvalid<IntNative>(maximum + "0", "IntNative")
+        expectInvalid<UIntNative>(unsignedMaximum + "0", "UIntNative")
+    }
+
+    @TestCase
     func everyFloatTypeParsesWithoutLosingItsDeclaredType() {
         // arrange
         let raw = Some("1.5")
