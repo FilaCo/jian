@@ -29,7 +29,7 @@ so the SDK and `cog` must also be available to the process running Git.
 cjpm build
 cjpm test --target-dir target/test
 cjpm test --target-dir target/test src/runtime
-cjpm test --target-dir target/test '--filter=LexerTest.*'
+cjpm test --target-dir target/test '--filter=ArgCursorTest.*'
 ```
 
 Builds and tests use separate target directories because sharing one invalidates

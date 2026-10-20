@@ -16,7 +16,7 @@ command if `cjpm` is not already available.
 
 - `cjpm build` — build the library.
 - `cjpm test --target-dir target/test` — all tests. `cjpm build` and `cjpm test` in one target dir undo each other's incremental cache.
-- A subset: `cjpm test --target-dir target/test src/runtime`, or `'--filter=LexerTest.*'` (quote it: fish).
+- A subset: `cjpm test --target-dir target/test src/runtime`, or `'--filter=ArgCursorTest.*'` (quote it: fish).
 
 `cjpm` leaves `*.cj.macrocall` and `lib-macro_*.dylib` next to the sources: untracked build output.
 

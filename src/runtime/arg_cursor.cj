@@ -1,57 +1,147 @@
 package jian.runtime
 
-/** Argument emitted by `ArgCursor`. */
+import std.deriving.*
+
+/**
+ * Argument emitted by `ArgCursor`.
+ */
+@Derive[Equatable, ToString]
 public enum Arg {
-    /** `--name`; a separate value is read with `nextValue`. */
+    /**
+     * `--name`; a separate value is read with `nextValue`.
+     */
     | Long(/* name */String)
-    /** `--name=value`, including an empty value. */
+    /**
+     * `--name=value`, including an empty value.
+     */
     | Long(/* name */String, /* value */String)
-    /** ASCII short flag, including one split from a cluster. */
+    /**
+     * ASCII short flag, including one split from a cluster.
+     */
     | Short(/* ASCII name */Byte)
-    /** ASCII short option with an attached or separate value. */
+    /**
+     * ASCII short option with an attached or separate value.
+     */
     | Short(/* ASCII name */Byte, /* value */String)
-    /** Non-option argument: a positional, subcommand name, `-`, or anything after `--`. */
+    /**
+     * Non-option argument: a positional, subcommand name, `-`, or anything after `--`.
+     */
     | Operand(String)
 }
 
 /**
- * Cursor contract for generated parsers; parsing methods are currently stubs.
+ * Traverses argv, splitting short options using their declared value requirements.
  */
 public class ArgCursor {
-    /** `shortsTakingValue` disambiguates clusters from attached values. */
+    private var position: Int64 = 0
+    private var shortOffset: Int64 = 0
+    private var optionsEnded: Bool = false
+
+    /**
+     * `shortsTakingValue` contains ASCII names whose suffix or following argv is their value.
+     */
     public ArgCursor(private let argv: Array<String>, private let shortsTakingValue!: Array<Byte> = []) {}
 
     /**
      * Returns the next argument without consuming it; `None` at the end.
      *
-     * throws UsageException when a short option taking a value has none.
+     * throws UsageException for a missing value or non-ASCII short name.
      */
     public func peek(): ?Arg {
-        throw UnsupportedException("ArgCursor.peek: not implemented yet")
+        let (arg, _, _, _) = read()
+        arg
     }
 
     /**
-     * Consumes the next argument; `None` at the end.
+     * Consumes one argument; returns `None` at the end.
      *
-     * throws UsageException when a short option taking a value has none.
+     * throws UsageException for a missing value or non-ASCII short name.
      */
     public func next(): ?Arg {
-        throw UnsupportedException("ArgCursor.next: not implemented yet")
+        let (arg, nextPosition, nextOffset, ended) = read()
+        position = nextPosition
+        shortOffset = nextOffset
+        optionsEnded = ended
+        arg
     }
 
     /**
-     * Reads the separate value of `--option value`; `option` is used in errors.
+     * Consumes the next raw argv, even `--` or option-looking text, as a required value.
+     * Within a partial cluster, consumes its reconstructed `-suffix` instead.
      *
-     * throws UsageException when no argument is left.
+     * throws UsageException naming `option` when no input remains.
      */
     public func nextValue(option: String): String {
-        throw UnsupportedException("ArgCursor.nextValue(${option}): not implemented yet")
+        if (position == argv.size) {
+            throw UsageException.missingArgument(option)
+        }
+        let value = if (shortOffset == 0) { argv[position] } else { "-" + argv[position][shortOffset..] }
+        position++
+        shortOffset = 0
+        value
     }
 
     /**
-     * Returns unconsumed argv so `App` can forward it to a subcommand unchanged.
+     * Copies unconsumed argv for subcommand dispatch without changing the cursor.
+     * Raw strings, including `--`, are preserved at argv boundaries. Within a
+     * cluster, the first string is `-` plus its unconsumed suffix.
      */
     public func remaining(): Array<String> {
-        throw UnsupportedException("ArgCursor.remaining: not implemented yet")
+        let result = argv[position..].clone()
+        if (shortOffset != 0) {
+            result[0] = "-" + argv[position][shortOffset..]
+        }
+        result
+    }
+
+    /**
+     * Computes the next state without committing it: lookahead cannot classify a
+     * required raw value irreversibly, nor consume a marker or part of a cluster.
+     */
+    private func read(): (?Arg, Int64, Int64, Bool) {
+        var index = position
+        var ended = optionsEnded
+        while (index < argv.size) {
+            let raw = argv[index]
+            if (ended || raw == "-" || !raw.startsWith("-")) {
+                return (Some(Arg.Operand(raw)), index + 1, 0, ended)
+            }
+            if (raw == "--") {
+                ended = true
+                index++
+                continue
+            }
+            if (raw.startsWith("--")) {
+                let parts = raw[2..].split("=", 2)
+                let arg = if (parts.size == 2) { Arg.Long(parts[0], parts[1]) } else { Arg.Long(parts[0]) }
+                return (Some(arg), index + 1, 0, ended)
+            }
+            let offset = if (shortOffset == 0) { 1 } else { shortOffset }
+            let name = raw.toArray()[offset]
+            if (name > 127) {
+                throw UsageException.unknownOption("-" + raw[offset..])
+            }
+            if (shortsTakingValue.contains(name)) {
+                let suffix = raw[offset + 1..]
+                if (!suffix.isEmpty()) {
+                    let value = if (suffix.startsWith("=")) { suffix[1..] } else { suffix }
+                    return (Some(Arg.Short(name, value)), index + 1, 0, ended)
+                }
+                if (index + 1 == argv.size) {
+                    throw UsageException.missingArgument("-" + raw[offset..])
+                }
+                return (Some(Arg.Short(name, argv[index + 1])), index + 2, 0, ended)
+            }
+            // `-o=value` is explicit even if the caller does not declare o as
+            // value-taking; generated parsers decide whether that form is valid.
+            if (offset + 1 < raw.size && raw[offset + 1..].startsWith("=")) {
+                return (Some(Arg.Short(name, raw[offset + 2..])), index + 1, 0, ended)
+            }
+            if (offset + 1 == raw.size) {
+                return (Some(Arg.Short(name)), index + 1, 0, ended)
+            }
+            return (Some(Arg.Short(name)), index, offset + 1, ended)
+        }
+        (None, index, 0, ended)
     }
 }
