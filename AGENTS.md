@@ -9,19 +9,27 @@ A Typer-like CLI framework for Cangjie: a command is a plain function, and the `
 
 ## Build & test
 
-From the repo root (in Claude Code sessions `cjpm` is on `PATH` through the `SessionStart` hook in `.claude/settings.json`; in a shell of your own, `source ~/.cangjie/envsetup.sh` once):
+Run commands from the repository root. Setup, SDK selection, Git hooks
+and troubleshooting are in [Development](docs/development.md). Codex reads this
+file as repository guidance; load the SDK environment in the shell running a
+command if `cjpm` is not already available.
 
-- `cjpm build` · `cjpm build -l` (with cjlint)
+- `cjpm build` — build the library.
 - `cjpm test --target-dir target/test` — all tests. `cjpm build` and `cjpm test` in one target dir undo each other's incremental cache.
-- A subset: `cjpm test --target-dir target/test src/parsing`, or `'--filter=LexerTest.*'` (quote it: fish).
+- A subset: `cjpm test --target-dir target/test src/runtime`, or `'--filter=LexerTest.*'` (quote it: fish).
 
 `cjpm` leaves `*.cj.macrocall` and `lib-macro_*.dylib` next to the sources: untracked build output.
 
-The library is `output-type = "static"`: across a shared-library boundary cjc can drop extension funcTables and the process aborts at run time.
-
 ## Macros
 
-`@Command` and `@Callback` live in a `macro package`, which may export macros only — runtime API the generated code calls lives in ordinary packages. Generated code is `quote(...)` naming things unqualified, so it resolves in the *user's* package: everything it refers to must be public and imported there. A green build of the macro package proves nothing about its output; a build of a package using the macro does — test macros that way.
+`@Command` and `@Callback` live in the root package, a `macro package jian` (`src/*.cj`), which may export macros only — runtime API the generated code calls lives in `jian.runtime` (`src/runtime`), and the root `public import`s it so users write a single `import jian.*`. Generated code is `quote(...)` naming things unqualified, so it resolves in the *user's* package: everything it refers to must be public and imported there. A green build of the macro package proves nothing about its output; a build of a package using the macro does — test macros that way.
+
+Each macro is declared twice, attributed (`@Command[help: ...]`) and plain (`@Command`): cjc rejects the plain form of a macro declared only with `attrs`.
+
+Short option names are single ASCII bytes: `ParamSpec.short` is `?Byte`,
+`Arg.Short` carries one `Byte`, and `ArgCursor` takes `Array<Byte>` for shorts
+requiring values. The cursor splits short clusters. `@Param` must reject
+non-ASCII short names at compile time when implemented in #15.
 
 ## Tests
 
@@ -29,4 +37,6 @@ Unit tests sit beside the code as `*_test.cj` in the same package (`std.unittest
 
 ## Commits
 
-Conventional Commits, checked by commitlint on `commit-msg` (husky); run `npm install` once per clone to activate the hook. PRs into `master`.
+Conventional Commits, checked by `cog` through `.githooks/commit-msg` and in CI
+(commits and PR titles). Activate hooks with `git config core.hooksPath .githooks`.
+PRs into `master`.

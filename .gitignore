@@ -1,11 +1,8 @@
 .cache
-.vscode
-node_modules
 target
 *.macrocall
 lib-macro_*.dylib
-.claude/*
-!.claude/settings.json
-!.claude/hooks/
-!.claude/agents/
-!.claude/skills/
+lib-macro_*.so
+.vscode/
+.claude/
+node_modules/

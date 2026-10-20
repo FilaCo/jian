@@ -1,3 +1,4 @@
-package jian
+macro package jian
 
-public import jian.builders.* // cjlint-ignore !G.PKG.01
+// Re-export runtime names so consumers need only `import jian.*`.
+public import jian.runtime.*
