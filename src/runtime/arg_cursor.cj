@@ -2,19 +2,16 @@ package jian.runtime
 
 /** Argument emitted by `ArgCursor`. */
 public enum Arg {
-    /**
-     * `--name` or `--name=value`; a separate value is read with `nextValue`.
-     */
-    | Long(/* name */String, /* value */?String)
-    /**
-     * One ASCII short option. A value-taking short consumes the cluster suffix
-     * or next argument: `-abn3` becomes `a`, `b`, `n=3` when `n` takes a value.
-     */
-    | Short(/* ASCII name */Byte, /* value */?String)
-    /**
-     * `anything`, `-` and everything after `--`.
-     */
-    | Positional(String)
+    /** `--name`; a separate value is read with `nextValue`. */
+    | Long(/* name */String)
+    /** `--name=value`, including an empty value. */
+    | Long(/* name */String, /* value */String)
+    /** ASCII short flag, including one split from a cluster. */
+    | Short(/* ASCII name */Byte)
+    /** ASCII short option with an attached or separate value. */
+    | Short(/* ASCII name */Byte, /* value */String)
+    /** Non-option argument: a positional, subcommand name, `-`, or anything after `--`. */
+    | Operand(String)
 }
 
 /**
