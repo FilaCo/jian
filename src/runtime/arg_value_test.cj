@@ -1,23 +1,22 @@
 package jian.runtime
 
 import std.fs.Path
+import std.math.MaxMinValue
+import std.reflect.TypeInfo
+import std.unittest.prop_test.{Arbitrary, random}
 
-type MaybeInt = ?Int64
+// An alias is intentional: CLI behavior must follow the underlying type.
+type OptionalInt64 = ?Int64
 
+// This SDK resolves static extension members on aliases through a generic constraint.
 private func absentAs<T>(): ?T where T <: ArgValue<T> { T.whenAbsent() }
 
 private func expectInvalid<T>(raw: String, expected: String) where T <: ArgValue<T> {
-    var caught = false
-    try {
-        let _ = acceptAs<T>(None, Some(raw))
-    } catch (error: InvalidValueException) {
-        caught = true
-        @Expect(error.raw, raw)
-        @Expect(error.expected, expected)
-        @Expect(error.message.contains(raw), true)
-        @Expect(error.message.contains(expected), true)
-    }
-    @Expect(caught, true)
+    let error = @AssertThrows[InvalidValueException](acceptAs<T>(None, Some(raw)))
+    @Expect(error.raw, raw)
+    @Expect(error.expected, expected)
+    @Expect(error.message.contains(raw), true)
+    @Expect(error.message.contains(expected), true)
 }
 
 @Test
@@ -25,9 +24,11 @@ class ArgValueTest {
     @TestCase
     func nestedContainersDelegateTheirMetadata() {
         // arrange
-        let optionalInts = Array<MaybeInt>.metavar()
+        let optionalInts = Array<?Int64>.metavar()
+
         // act
         let optionalFlagsTakeValue = Option<Bool>.takesValue()
+
         // assert
         @Expect(optionalInts, "INT...")
         @Expect(optionalFlagsTakeValue, false)
@@ -41,9 +42,11 @@ class ArgValueTest {
     func repeatedArrayOccurrencesAppendInOrderWithoutMutatingPreviousValues() {
         // arrange
         let first = acceptAs<Array<Int64>>(None, Some("1"))
+
         // act
         let second = acceptAs<Array<Int64>>(Some(first), Some("2"))
         let third = acceptAs<Array<Int64>>(Some(second), Some("3"))
+
         // assert
         @Expect(first, [1])
         @Expect(second, [1, 2])
@@ -53,163 +56,181 @@ class ArgValueTest {
     @TestCase
     func omittedValuesDistinguishOptionalValuesFromRequiredOnes() {
         // arrange
-        let optional = absentAs<MaybeInt>()
+        let optional = Option<Int64>.whenAbsent()
+
         // act
-        let flag = absentAs<Bool>()
-        let array = absentAs<Array<String>>()
-        let integer = absentAs<Int64>()
+        let flag = Bool.whenAbsent()
+        let array = Array<String>.whenAbsent()
+        let integer = Int64.whenAbsent()
+
         // assert
         @Expect(optional, Some(None))
         @Expect(flag, Some(false))
         @Expect(array, Some([]))
         @Expect(integer, None)
-        @Expect(absentAs<String>(), None)
-        @Expect(absentAs<Path>(), None)
+        @Expect(String.whenAbsent(), None)
+        @Expect(Path.whenAbsent(), None)
     }
 
     @TestCase
     func aliasesUseTheUnderlyingOptionalBehavior() {
         // arrange
-        let previous: ?MaybeInt = Some(Some(7))
+        let previous: ?OptionalInt64 = Some(Some(7))
+
         // act
-        let value = acceptAs<MaybeInt>(previous, Some("42"))
+        let value = acceptAs<OptionalInt64>(previous, Some("42"))
+
         // assert
         @Expect(value, Some(42))
-        @Expect(acceptAs<Array<MaybeInt>>(None, Some("3")), [Some(3)])
+        @Expect(absentAs<OptionalInt64>(), Some(None))
+        @Expect(acceptAs<Array<OptionalInt64>>(None, Some("3")), [Some(3)])
     }
 
     @TestCase
     func scalarsReplacePreviousOccurrencesAndPreserveEmptyText() {
         // arrange
         let previous: ?String = Some("before")
+
         // act
         let text = acceptAs<String>(previous, Some(""))
         let number = acceptAs<Int64>(Some(10), Some("20"))
+
         // assert
         @Expect(text, "")
         @Expect(number, 20)
     }
 
-    @TestCase
-    func flagsAcceptBareOccurrencesAndExplicitBooleanValues() {
+    @TestCase[input in [(None<String>, true), (Some("true"), true), (Some("false"), false)]]
+    func flagsAcceptBareOccurrencesAndExplicitBooleanValues(input: (?String, Bool)) {
         // arrange
-        let previous = Some(false)
+        let (raw, expected) = input
+
         // act
-        let bare = acceptAs<Bool>(previous, None)
-        let explicitFalse = acceptAs<Bool>(Some(true), Some("false"))
+        let flag = acceptAs<Bool>(Some(!expected), raw)
+        let optional = acceptAs<Option<Bool>>(None, raw)
+
         // assert
-        @Expect(bare, true)
-        @Expect(explicitFalse, false)
-        @Expect(acceptAs<Bool>(None, Some("true")), true)
-        @Expect(acceptAs<Option<Bool>>(None, None), Some(true))
-        expectInvalid<Bool>("yes", "Bool")
+        @Expect(flag, expected)
+        @Expect(optional, Some(expected))
     }
 
     @TestCase
     func pathsRemainTextualWithoutCheckingTheirExistence() {
         // arrange
         let raw = "a-missing-directory/../file.txt"
+
         // act
         let value = acceptAs<Path>(None, Some(raw))
+
         // assert
         @Expect(value, Path(raw))
         @Expect(value.toString(), raw)
     }
 
-    @TestCase
-    func everyIntegerTypeParsesWithoutLosingItsDeclaredType() {
+    @TestCase[expected in random()]
+    @Types[T in <Int8, Int16, Int32, Int64, IntNative, UInt8, UInt16, UInt32, UInt64, UIntNative>]
+    @Configure[randomSeed: 21, generationSteps: 100]
+    func integerTextRoundTrips<T>(expected: T) where T <: ArgValue<T> & ToString & Equatable<T> & Arbitrary<T> {
         // arrange
-        let negative = Some("-12")
-        let positive = Some("12")
-        // act / assert
-        @Expect(acceptAs<Int8>(None, negative), Int8(-12))
-        @Expect(acceptAs<Int16>(None, negative), Int16(-12))
-        @Expect(acceptAs<Int32>(None, negative), Int32(-12))
-        @Expect(acceptAs<Int64>(None, negative), -12)
-        @Expect(acceptAs<IntNative>(None, negative), IntNative(-12))
-        @Expect(acceptAs<UInt8>(None, positive), UInt8(12))
-        @Expect(acceptAs<UInt16>(None, positive), UInt16(12))
-        @Expect(acceptAs<UInt32>(None, positive), UInt32(12))
-        @Expect(acceptAs<UInt64>(None, positive), UInt64(12))
-        @Expect(acceptAs<UIntNative>(None, positive), UIntNative(12))
-    }
+        let raw = expected.toString()
 
-    @TestCase
-    func nativeIntegersAcceptTheirBoundsAndRejectOverflow() {
-        // arrange
-        let minimum = IntNative.Min.toString()
-        let maximum = IntNative.Max.toString()
-        let unsignedMaximum = UIntNative.Max.toString()
         // act
-        let low = acceptAs<IntNative>(None, Some(minimum))
-        let high = acceptAs<IntNative>(None, Some(maximum))
-        let unsignedHigh = acceptAs<UIntNative>(None, Some(unsignedMaximum))
+        let actual = acceptAs<T>(None, Some(raw))
+
         // assert
-        @Expect(low, IntNative.Min)
-        @Expect(high, IntNative.Max)
-        @Expect(unsignedHigh, UIntNative.Max)
-        expectInvalid<IntNative>(minimum + "0", "IntNative")
-        expectInvalid<IntNative>(maximum + "0", "IntNative")
-        expectInvalid<UIntNative>(unsignedMaximum + "0", "UIntNative")
+        @Expect(actual, expected)
     }
 
     @TestCase
-    func everyFloatTypeParsesWithoutLosingItsDeclaredType() {
+    @Types[T in <Int8, Int16, Int32, Int64, IntNative, UInt8, UInt16, UInt32, UInt64, UIntNative>]
+    func integersAcceptTheirBoundsAndRejectOverflow<T>() where T <: ArgValue<T> & ToString & Equatable<T> & MaxMinValue<T> {
         // arrange
-        let raw = Some("1.5")
-        // act / assert
-        @Expect(acceptAs<Float16>(None, raw), Float16(1.5))
-        @Expect(acceptAs<Float32>(None, raw), Float32(1.5))
-        @Expect(acceptAs<Float64>(None, raw), 1.5)
+        let minimum = T.getMin()
+        let maximum = T.getMax()
+        let expectedType = TypeInfo.of<T>().name
+
+        // act
+        let low = acceptAs<T>(None, Some(minimum.toString()))
+        let high = acceptAs<T>(None, Some(maximum.toString()))
+
+        // assert
+        @Expect(low, minimum)
+        @Expect(high, maximum)
+        expectInvalid<T>(maximum.toString() + "0", expectedType)
+        if (minimum.toString().startsWith("-")) {
+            expectInvalid<T>(minimum.toString() + "0", expectedType)
+        } else {
+            expectInvalid<T>("-1", expectedType)
+        }
+    }
+
+    @TestCase[expected in [1.5, -1.5, 0.0]]
+    func everyFloatTypeParsesWithoutLosingItsDeclaredType(expected: Float64) {
+        // arrange
+        let raw = Some(expected.toString())
+
+        // act
+        let half = acceptAs<Float16>(None, raw)
+        let single = acceptAs<Float32>(None, raw)
+        let double = acceptAs<Float64>(None, raw)
+
+        // assert
+        @Expect(half, Float16(expected))
+        @Expect(single, Float32(expected))
+        @Expect(double, expected)
+    }
+
+    @TestCase[raw in ["", "oops"]]
+    @Types[T in <Int8, Int16, Int32, Int64, IntNative, UInt8, UInt16, UInt32, UInt64, UIntNative, Float16, Float32, Float64, Bool>]
+    func invalidScalarsCarryTheRawValueAndExpectedType<T>(raw: String) where T <: ArgValue<T> {
+        // arrange
+        let expected = TypeInfo.of<T>().name
+
+        // act
+        let error = @AssertThrows[InvalidValueException](acceptAs<T>(None, Some(raw)))
+
+        // assert
+        @Expect(error.raw, raw)
+        @Expect(error.expected, expected)
+        @Expect(error.message.contains(raw), true)
+        @Expect(error.message.contains(expected), true)
     }
 
     @TestCase
-    func invalidNumbersCarryTheRawValueAndExpectedType() {
-        // arrange / act / assert
-        expectInvalid<Int8>("128", "Int8")
-        expectInvalid<Int16>("32768", "Int16")
-        expectInvalid<Int32>("2147483648", "Int32")
-        expectInvalid<Int64>("9223372036854775808", "Int64")
-        expectInvalid<IntNative>("oops", "IntNative")
-        expectInvalid<UInt8>("256", "UInt8")
-        expectInvalid<UInt16>("65536", "UInt16")
-        expectInvalid<UInt32>("4294967296", "UInt32")
-        expectInvalid<UInt64>("18446744073709551616", "UInt64")
-        expectInvalid<UIntNative>("-1", "UIntNative")
-        expectInvalid<Float16>("oops", "Float16")
-        expectInvalid<Float32>("oops", "Float32")
-        expectInvalid<Float64>("oops", "Float64")
-        expectInvalid<MaybeInt>("oops", "Int64")
-        expectInvalid<Array<Int64>>("oops", "Int64")
+    @Types[T in <Option<Int64>, Array<Int64>>]
+    func containersPreserveTheElementConversionError<T>() where T <: ArgValue<T> {
+        // arrange
+        let raw = "oops"
+
+        // act
+        let error = @AssertThrows[InvalidValueException](acceptAs<T>(None, Some(raw)))
+
+        // assert
+        @Expect(error.raw, raw)
+        @Expect(error.expected, "Int64")
     }
 
     @TestCase
     func missingScalarValuesAreUsageErrorsRatherThanOptionUnwrapErrors() {
         // arrange
-        var caught = false
+        let raw = None<String>
+
         // act
-        try {
-            let _ = acceptAs<Int64>(None, None)
-        } catch (error: UsageException) {
-            caught = true
-            @Expect(error.message, "missing argument value")
-        }
+        let error = @AssertThrows[UsageException](acceptAs<Int64>(None, raw))
+
         // assert
-        @Expect(caught, true)
+        @Expect(error.message, "missing argument value")
     }
 
     @TestCase
     func invalidValueExceptionsAreUsageErrors() {
         // arrange
-        var caught = false
+        let raw = Some("not-an-integer")
+
         // act
-        try {
-            let _ = acceptAs<Int64>(None, Some("not-an-integer"))
-        } catch (error: UsageException) {
-            caught = true
-            @Expect(error.message.contains("Int64"), true)
-        }
+        let error = @AssertThrows[UsageException](acceptAs<Int64>(None, raw))
+
         // assert
-        @Expect(caught, true)
+        @Expect(error.message.contains("Int64"), true)
     }
 }
