@@ -2,3 +2,7 @@
 target
 *.macrocall
 lib-macro_*.dylib
+lib-macro_*.so
+.vscode/
+.claude/
+node_modules/

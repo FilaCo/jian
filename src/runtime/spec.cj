@@ -52,9 +52,9 @@ public struct ParamSpec {
          */
         public let metavar!: String = "",
         /**
-         * The one-letter alias, e.g. `t` for `-t`.
+         * The single ASCII alias, e.g. `b't'` for `-t`.
          */
-        public let short!: ?Rune = None,
+        public let short!: ?Byte = None,
         /**
          * The text beside the parameter in help; empty for none.
          */

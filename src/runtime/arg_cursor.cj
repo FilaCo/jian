@@ -9,9 +9,11 @@ public enum Arg {
      */
     | Long(/* name */String, /* value */?String)
     /**
-     * `-n`, `-n=v`, `-n v` or `-abc`.
+     * One ASCII short option: `-n`, `-n=v`, `-nv` or `-n v`.
+     * The cursor splits `-abc` into individual options; a value-taking option
+     * consumes the rest of the cluster or the next argument.
      */
-    | Short(/* a letter or cluster */String, /* value */?String)
+    | Short(/* ASCII name */Byte, /* value */?String)
     /**
      * `anything`, `-` and everything after `--`.
      */
@@ -21,6 +23,7 @@ public enum Arg {
 /**
  * Reads a command line one argument at a time: a pure function of `argv` and of which
  * short options take a value (without that, `-tv3` cannot be told from `-t v3`).
+ * Short option names are single ASCII bytes, matching `ParamSpec.short`.
  */
 public class ArgCursor {
     public ArgCursor(private let argv: Array<String>, private let shortsTakingValue!: Array<Byte> = []) {}

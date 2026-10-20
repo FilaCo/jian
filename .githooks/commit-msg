@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+if ! command -v cog >/dev/null 2>&1; then
+    echo "commit-msg: install cocogitto (cog); see docs/development.md" >&2
+    exit 1
+fi
+
+cog verify --file "$1"
