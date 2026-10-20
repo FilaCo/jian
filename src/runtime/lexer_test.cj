@@ -7,17 +7,22 @@ class LexerTest {
     @TestCase[input in [
 (
  [ "cjpm", "init", "--name", "jian", "--type=dynamic" ],
- [ Value("cjpm"), Value("init"), DoubleDashed("name"), Value("jian"), DoubleDashed("type", "dynamic") ]
+ [ Token.Operand("cjpm"), Token.Operand("init"), Token.Long("name"), Token.Operand("jian"), Token.Long("type", "dynamic") ]
 ),
 
 (
  [ "cjc", "-", "--output-type=exe", "--output-dir", "whatever" ],
- [ Value("cjc"), StdinPlaceholder, DoubleDashed("output-type", "exe"), DoubleDashed("output-dir"), Value("whatever") ]
+ [ Token.Operand("cjc"), Token.Operand("-"), Token.Long("output-type", "exe"), Token.Long("output-dir"), Token.Operand("whatever") ]
 ),
 
 (
  [ "cjdev", "exec", "--", "ls", "-la" ],
- [ Value("cjdev"), Value("exec") ]
+ [ Token.Operand("cjdev"), Token.Operand("exec") ]
+),
+
+(
+ [ "-abc", "-n=3", "--name=", "-", "file" ],
+ [ Token.Short("abc"), Token.Short("n", "3"), Token.Long("name", ""), Token.Operand("-"), Token.Operand("file") ]
 ),
  ]]
     func itWorks(input: (Array<String>, Array<Token>)) {
@@ -74,13 +79,13 @@ class LexerTest {
     func bumpWorks() {
         // arrange
         let input = ["cjdev", "build", "-t", "debug", "cjc", "--", "whatever", "else"]
-        let expected = [Value("cjdev"), Value("build"), Dashed("t"), Value("debug"), Value("cjc")]
+        let expected = [Token.Operand("cjdev"), Token.Operand("build"), Token.Short("t"), Token.Operand("debug"), Token.Operand("cjc")]
         let sut = Lexer.make(input)
 
         // act
         var pos = 0
         while (!sut.isAtEoi()) {
-            if (sut.peek() == Eoi) {
+            if (sut.peek() == Token.Eoi) {
                 break
             }
             @Expect(input[pos..], sut.remainder())

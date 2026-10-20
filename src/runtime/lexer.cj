@@ -6,7 +6,7 @@ class Lexer <: Iterable<Token> {
     private Lexer(
         private let argv: Array<String>,
         private var pos!: Int64 = 0,
-        private var cur!: Token = Dummy
+        private var cur!: Token = Token.Dummy
     ) {}
 
     static func make(argv: Array<String>): Lexer {
@@ -27,13 +27,13 @@ class Lexer <: Iterable<Token> {
     func bump(): Token {
         let tok = argv.get(pos).map {
             s: String => match (s) {
-                case "--" => Eoi
-                case "-" => stdinPlaceholder()
-                case s where s.startsWith("--") => doubleDashed(s)
-                case s where s.startsWith("-") => dashed(s)
-                case s => value(s)
+                case "--" => Token.Eoi
+                case "-" => operand(s)
+                case s where s.startsWith("--") => longOption(s)
+                case s where s.startsWith("-") => shortOption(s)
+                case s => operand(s)
             }
-        } ?? Eoi
+        } ?? Token.Eoi
 
         let res = cur
         cur = tok
@@ -49,45 +49,39 @@ class Lexer <: Iterable<Token> {
             return []
         }
 
-        if (cur == Eoi) {
+        if (cur == Token.Eoi) {
             return argv[(pos + 1)..]
         }
 
         argv[pos - 1..]
     }
 
-    private func stdinPlaceholder(): Token {
-        pos++
-
-        StdinPlaceholder
-    }
-
-    private func doubleDashed(s: String): Token {
+    private func longOption(s: String): Token {
         pos++
 
         let parts = s.removePrefix("--").split("=", 2)
         if (parts.size > 1) {
-            DoubleDashed(parts[0], parts[1])
+            Token.Long(parts[0], parts[1])
         } else {
-            DoubleDashed(parts[0])
+            Token.Long(parts[0])
         }
     }
 
-    private func dashed(s: String): Token {
+    private func shortOption(s: String): Token {
         pos++
 
         let parts = s.removePrefix("-").split("=", 2)
         if (parts.size > 1) {
-            Dashed(parts[0], parts[1])
+            Token.Short(parts[0], parts[1])
         } else {
-            Dashed(parts[0])
+            Token.Short(parts[0])
         }
     }
 
-    private func value(s: String): Token {
+    private func operand(s: String): Token {
         pos++
 
-        Value(s)
+        Token.Operand(s)
     }
 }
 
@@ -96,7 +90,7 @@ private class TokenIterator <: Iterator<Token> {
 
     public func next(): ?Token {
         match (lexer.bump()) {
-            case Eoi => None
+            case Token.Eoi => None
             case token => Some(token)
         }
     }
@@ -104,17 +98,15 @@ private class TokenIterator <: Iterator<Token> {
 
 @Derive[Equatable, ToString]
 enum Token {
-    // `-`.
-    | StdinPlaceholder
     // `-f` or an unresolved cluster such as `-vvv`.
-    | Dashed(String)
+    | Short(String)
     // `-f=123`.
-    | Dashed(String, String)
+    | Short(String, String)
     // `--foo`.
-    | DoubleDashed(String)
+    | Long(String)
     // `--foo=bar`.
-    | DoubleDashed(String, String)
-    | Value(String)
+    | Long(String, String)
+    | Operand(String)
     // Also represents `--`; callers recover trailing arguments via `remainder()`.
     | Eoi
     // Initial lookahead before the first `bump()`.
