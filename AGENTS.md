@@ -9,18 +9,16 @@ A Typer-like CLI framework for Cangjie: a command is a plain function, and the `
 
 ## Build & test
 
-Run commands from the repository/worktree root. Setup, SDK selection, Git hooks
+Run commands from the repository root. Setup, SDK selection, Git hooks
 and troubleshooting are in [Development](docs/development.md). Codex reads this
 file as repository guidance; load the SDK environment in the shell running a
 command if `cjpm` is not already available.
 
-- `cjpm build` · `cjpm build -l` (with cjlint). See Development for the known cjlint crash when a package inside this module uses the root macros.
+- `cjpm build` — build the library.
 - `cjpm test --target-dir target/test` — all tests. `cjpm build` and `cjpm test` in one target dir undo each other's incremental cache.
 - A subset: `cjpm test --target-dir target/test src/runtime`, or `'--filter=LexerTest.*'` (quote it: fish).
 
 `cjpm` leaves `*.cj.macrocall` and `lib-macro_*.dylib` next to the sources: untracked build output.
-
-The library is `output-type = "static"`: across a shared-library boundary cjc can drop extension funcTables and the process aborts at run time.
 
 ## Macros
 
@@ -42,13 +40,3 @@ Unit tests sit beside the code as `*_test.cj` in the same package (`std.unittest
 Conventional Commits, checked by `cog` through `.githooks/commit-msg` and in CI
 (commits and PR titles). Activate hooks with `git config core.hooksPath .githooks`.
 PRs into `master`.
-
-## Plan
-
-[Issue #9](https://github.com/FilaCo/jian/issues/9) and its tracking comment are
-the design and implementation plan. Read the relevant child issue before each
-step; keep changes scoped to that step and check its acceptance criteria.
-Verify unfamiliar compiler behavior with a small probe. Code, tests and any
-documentation they invalidate change together; report checks and limitations.
-Use an independent worktree/build cache for concurrent work. Remove a worktree
-only after checking for uncommitted work and active users/processes.

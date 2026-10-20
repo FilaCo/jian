@@ -12,6 +12,8 @@ public enum Arg {
      * One ASCII short option: `-n`, `-n=v`, `-nv` or `-n v`.
      * The cursor splits `-abc` into individual options; a value-taking option
      * consumes the rest of the cluster or the next argument.
+     * For flags `a`, `b` and a value-taking `n`, `-abn3` and `-abn 3` both
+     * yield `a`, `b`, `n=3`; `-nabc` yields just `n=abc`.
      */
     | Short(/* ASCII name */Byte, /* value */?String)
     /**
