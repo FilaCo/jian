@@ -1,6 +1,4 @@
 macro package jian
 
-/**
- * Macro package can export non-macro package, but not vice versa
- */
+// Re-export runtime names so consumers need only `import jian.*`.
 public import jian.runtime.*

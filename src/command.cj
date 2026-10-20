@@ -3,14 +3,14 @@ macro package jian
 import std.ast.*
 
 /**
- * Turns a function into a CLI command.
+ * CLI command declaration; currently a pass-through stub.
  */
 public macro Command(attrs: Tokens, input: Tokens): Tokens {
     input
 }
 
 /**
- * Turns a function into a CLI command.
+ * Attribute-free form of `@Command`.
  */
 public macro Command(input: Tokens): Tokens {
     input

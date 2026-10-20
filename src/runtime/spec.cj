@@ -3,7 +3,7 @@ package jian.runtime
 import std.deriving.*
 
 /**
- * What help and usage know about a command or a callback: generated as literals.
+ * Command or callback metadata used to render help and usage.
  */
 public struct CommandSpec {
     public CommandSpec(
@@ -38,7 +38,7 @@ public enum ParamKind {
 }
 
 /**
- * What help and usage know about one parameter of a command.
+ * Parameter metadata used to render help and usage.
  */
 public struct ParamSpec {
     public ParamSpec(

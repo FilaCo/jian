@@ -1,19 +1,14 @@
 package jian.runtime
 
-/**
- * One argument as `ArgCursor` reads it.
- */
+/** Argument emitted by `ArgCursor`. */
 public enum Arg {
     /**
-     * `--name`, `--name value` or `--name=value`.
+     * `--name` or `--name=value`; a separate value is read with `nextValue`.
      */
     | Long(/* name */String, /* value */?String)
     /**
-     * One ASCII short option: `-n`, `-n=v`, `-nv` or `-n v`.
-     * The cursor splits `-abc` into individual options; a value-taking option
-     * consumes the rest of the cluster or the next argument.
-     * For flags `a`, `b` and a value-taking `n`, `-abn3` and `-abn 3` both
-     * yield `a`, `b`, `n=3`; `-nabc` yields just `n=abc`.
+     * One ASCII short option. A value-taking short consumes the cluster suffix
+     * or next argument: `-abn3` becomes `a`, `b`, `n=3` when `n` takes a value.
      */
     | Short(/* ASCII name */Byte, /* value */?String)
     /**
@@ -23,15 +18,14 @@ public enum Arg {
 }
 
 /**
- * Reads a command line one argument at a time: a pure function of `argv` and of which
- * short options take a value (without that, `-tv3` cannot be told from `-t v3`).
- * Short option names are single ASCII bytes, matching `ParamSpec.short`.
+ * Cursor contract for generated parsers; parsing methods are currently stubs.
  */
 public class ArgCursor {
+    /** `shortsTakingValue` disambiguates clusters from attached values. */
     public ArgCursor(private let argv: Array<String>, private let shortsTakingValue!: Array<Byte> = []) {}
 
     /**
-     * The next argument without consuming it; `None` at the end.
+     * Returns the next argument without consuming it; `None` at the end.
      *
      * throws UsageException when a short option taking a value has none.
      */
@@ -49,7 +43,7 @@ public class ArgCursor {
     }
 
     /**
-     * Consumes the value of a long option given as `--option value`; `option` names it in errors.
+     * Reads the separate value of `--option value`; `option` is used in errors.
      *
      * throws UsageException when no argument is left.
      */
@@ -58,7 +52,7 @@ public class ArgCursor {
     }
 
     /**
-     * The arguments not consumed yet, as given: what `App` hands its subcommand.
+     * Returns unconsumed argv so `App` can forward it to a subcommand unchanged.
      */
     public func remaining(): Array<String> {
         throw UnsupportedException("ArgCursor.remaining: not implemented yet")

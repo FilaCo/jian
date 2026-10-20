@@ -1,8 +1,7 @@
 package jian.runtime
 
 /**
- * A malformed command line: `App.run` prints the message and the usage to stderr and
- * returns exit code 2.
+ * CLI usage error; `App.run` prints it with usage and returns exit code 2.
  */
 public class UsageException <: Exception {
     public init(message: String) {
@@ -19,7 +18,7 @@ public class UsageException <: Exception {
         UsageException("missing argument '${name}'")
     }
 
-    /** `raw` does not parse as the type `option` expects, e.g. `Int64`. */
+    /** Invalid value; `expected` names the required type, e.g. `Int64`. */
     public static func invalidValue(option: String, raw: String, expected: String): UsageException {
         UsageException("invalid value '${raw}' for '${option}': expected ${expected}")
     }

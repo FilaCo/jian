@@ -91,7 +91,7 @@ class Lexer <: Iterable<Token> {
     }
 }
 
-class TokenIterator <: Iterator<Token> {
+private class TokenIterator <: Iterator<Token> {
     TokenIterator(private let lexer: Lexer) {}
 
     public func next(): ?Token {
@@ -106,18 +106,17 @@ class TokenIterator <: Iterator<Token> {
 enum Token {
     // `-`.
     | StdinPlaceholder
-    // Dashed option, e.g. `-f` or `-vvv`.
+    // `-f` or an unresolved cluster such as `-vvv`.
     | Dashed(String)
-    // Dashed option with associated value, e.g. `-f=123`.
+    // `-f=123`.
     | Dashed(String, String)
-    // Double dashed option, e.g. `--foo`.
+    // `--foo`.
     | DoubleDashed(String)
-    // Double dashed option with associated value, e.g. `--foo=bar`.
+    // `--foo=bar`.
     | DoubleDashed(String, String)
-    // Just a value, e.g. `boo`.
     | Value(String)
-    // End of input. Lexer emits this token if it reaches the end of input or the `--` value.
+    // Also represents `--`; callers recover trailing arguments via `remainder()`.
     | Eoi
-    // Dummy placeholder for parsing needs.
+    // Initial lookahead before the first `bump()`.
     | Dummy
 }
