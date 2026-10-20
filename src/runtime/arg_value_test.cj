@@ -223,14 +223,15 @@ class ArgValueTest {
     }
 
     @TestCase
-    func invalidValueExceptionsAreUsageErrors() {
+    func conversionErrorsGainParameterContextAtTheCommandBoundary() {
         // arrange
-        let raw = Some("not-an-integer")
+        let conversion = InvalidValueException("oops", "Int64")
 
         // act
-        let error = @AssertThrows[UsageException](acceptAs<Int64>(None, raw))
+        let usage = UsageException.invalidValue("--times", conversion.raw, conversion.expected)
 
         // assert
-        @Expect(error.message.contains("Int64"), true)
+        @Expect(conversion.toString(), "InvalidValueException: invalid value 'oops': expected Int64")
+        @Expect(usage.message, "invalid value 'oops' for '--times': expected Int64")
     }
 }

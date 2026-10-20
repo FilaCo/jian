@@ -3,7 +3,7 @@ package jian.runtime
 /**
  * CLI usage error; `App.run` prints it with usage and returns exit code 2.
  */
-public open class UsageException <: Exception {
+public class UsageException <: Exception {
     public init(message: String) {
         super(message)
     }
@@ -29,7 +29,7 @@ public open class UsageException <: Exception {
         UsageException("invalid value '${raw}' for '${option}': expected ${expected}")
     }
 
-    protected open override func getClassName(): String {
+    protected override func getClassName(): String {
         "UsageException"
     }
 }
