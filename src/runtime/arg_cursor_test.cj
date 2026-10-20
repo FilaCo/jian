@@ -1,122 +1,187 @@
 package jian.runtime
 
-private func describe(arg: ?Arg): String {
-    match (arg) {
-        case None => "EOF"
-        case Some(Arg.Long(name)) => "long:${name}"
-        case Some(Arg.Long(name, value)) => "long:${name}=${value}"
-        case Some(Arg.Short(name)) => "short:" + String.fromUtf8([name])
-        case Some(Arg.Short(name, value)) => "short:" + String.fromUtf8([name]) + "=${value}"
-        case Some(Arg.Operand(value)) => "operand:${value}"
-    }
-}
+import std.collection.ArrayList
 
 @Test
 class ArgCursorTest {
     @TestCase[input in [
-        (["cjpm", "init", "--name", "jian", "--type=dynamic"],
-            ["operand:cjpm", "operand:init", "long:name", "operand:jian", "long:type=dynamic"]),
-        (["--opt=v", "--opt=", "--opt=a=b", "--имя=да"], ["long:opt=v", "long:opt=", "long:opt=a=b", "long:имя=да"]),
-        (["-n", "3", "-n=3", "-n3", "-n=", "-n", ""],
-            ["short:n=3", "short:n=3", "short:n=3", "short:n=", "short:n="]),
-        (["-abn3", "-abn", "3", "-nabc"],
-            ["short:a", "short:b", "short:n=3", "short:a", "short:b", "short:n=3", "short:n=abc"]),
-        (["-abc", "-a=", "-a=value"], ["short:a", "short:b", "short:c", "short:a=", "short:a=value"]),
-        (["-n", "--", "-n", "-x", "-n", "--opt=v"], ["short:n=--", "short:n=-x", "short:n=--opt=v"]),
-        (["-nПривет", "-n=Привет"], ["short:n=Привет", "short:n=Привет"]),
-        (["-", "", "file", "--", "-a", "--x=v", "--", "-"],
-            ["operand:-", "operand:", "operand:file", "operand:-a", "operand:--x=v", "operand:--", "operand:-"]),
+        (
+            ["cjpm", "init", "--name", "jian", "--type=dynamic"],
+            [Arg.Operand("cjpm"), Arg.Operand("init"), Arg.Long("name"), Arg.Operand("jian"), Arg.Long("type", "dynamic")]
+        ),
+        (
+            ["--opt=v", "--opt=", "--opt=a=b", "--имя=да"],
+            [Arg.Long("opt", "v"), Arg.Long("opt", ""), Arg.Long("opt", "a=b"), Arg.Long("имя", "да")]
+        ),
+        (
+            ["-n", "3", "-n=3", "-n3", "-n=", "-n", ""],
+            [Arg.Short(b'n', "3"), Arg.Short(b'n', "3"), Arg.Short(b'n', "3"), Arg.Short(b'n', ""), Arg.Short(b'n', "")]
+        ),
+        (
+            ["-abn3", "-abn", "3", "-nabc"],
+            [
+                Arg.Short(b'a'), Arg.Short(b'b'), Arg.Short(b'n', "3"),
+                Arg.Short(b'a'), Arg.Short(b'b'), Arg.Short(b'n', "3"), Arg.Short(b'n', "abc")
+            ]
+        ),
+        (
+            ["-abc", "-a=", "-a=value"],
+            [Arg.Short(b'a'), Arg.Short(b'b'), Arg.Short(b'c'), Arg.Short(b'a', ""), Arg.Short(b'a', "value")]
+        ),
+        (
+            ["-n", "--", "-n", "-x", "-n", "--opt=v"],
+            [Arg.Short(b'n', "--"), Arg.Short(b'n', "-x"), Arg.Short(b'n', "--opt=v")]
+        ),
+        (
+            ["-nПривет", "-n=Привет"],
+            [Arg.Short(b'n', "Привет"), Arg.Short(b'n', "Привет")]
+        ),
+        (
+            ["-", "", "file", "--", "-a", "--x=v", "--", "-"],
+            [
+                Arg.Operand("-"), Arg.Operand(""), Arg.Operand("file"), Arg.Operand("-a"),
+                Arg.Operand("--x=v"), Arg.Operand("--"), Arg.Operand("-")
+            ]
+        ),
         (["--"], []),
         ([], [])
     ]]
-    func optionFormsPreserveValuesAndSplitClusters(input: (Array<String>, Array<String>)) {
+    func optionFormsPreserveValuesAndSplitClusters(input: (Array<String>, Array<Arg>)) {
         // arrange
         let (argv, expected) = input
         let cursor = ArgCursor(argv, shortsTakingValue: [b'n'])
 
         // act
-        for (arg in expected) {
-            let before = cursor.remaining()
-            @Expect(arg, describe(cursor.peek()))
-            @Expect(arg, describe(cursor.peek()))
-            @Expect(before, cursor.remaining())
-            @Expect(arg, describe(cursor.next()))
+        let actual = ArrayList<Arg>()
+        let firstPeek = ArrayList<Arg>()
+        let secondPeek = ArrayList<Arg>()
+        let before = ArrayList<Array<String>>()
+        let after = ArrayList<Array<String>>()
+        while (let Some(arg) <- cursor.peek()) {
+            before.add(cursor.remaining())
+            firstPeek.add(arg)
+            secondPeek.add(cursor.peek().getOrThrow())
+            after.add(cursor.remaining())
+            actual.add(cursor.next().getOrThrow())
         }
 
         // assert
-        @Expect("EOF", describe(cursor.peek()))
-        @Expect("EOF", describe(cursor.next()))
-        @Expect("EOF", describe(cursor.next()))
-        @Expect([], cursor.remaining())
+        @Expect(actual.toArray(), expected)
+        @Expect(firstPeek.toArray(), expected)
+        @Expect(secondPeek.toArray(), expected)
+        @Expect(after.toArray(), before.toArray())
+        @Expect(cursor.peek(), None)
+        @Expect(cursor.next(), None)
+        @Expect(cursor.next(), None)
+        @Expect(cursor.remaining(), [])
     }
 
     @TestCase[value in ["plain", "", "--", "-x", "--name=value", "-n", "-n=", "-abc"]]
     func longRequiredValueRemainsRawDespiteLookahead(value: String) {
         // arrange
         let cursor = ArgCursor(["--opt", value, "tail"], shortsTakingValue: [b'n'])
-        @Expect("long:opt", describe(cursor.next()))
+        let option = cursor.next()
 
         // act
-        // A declared short may fail lookahead, but it must still be usable as raw text.
-        try {
-            let _ = cursor.peek()
-        } catch (error: UsageException) {
-            @Expect("-n", value)
-            @Expect("missing argument '-n'", error.message)
-        }
-        @Expect([value, "tail"], cursor.remaining())
+        let _ = cursor.peek()
+        let before = cursor.remaining()
         let actual = cursor.nextValue("--opt")
+        let after = cursor.remaining()
+        let tail = cursor.next()
 
         // assert
-        @Expect(value, actual)
-        @Expect(["tail"], cursor.remaining())
-        @Expect("operand:tail", describe(cursor.next()))
-        @Expect("EOF", describe(cursor.next()))
-    }
-
-    @TestCase[input in [[], ["--"], ["last"]]]
-    func lastArgumentAndEofHaveStableState(input: Array<String>) {
-        // arrange
-        let cursor = ArgCursor(input)
-        let expected = if (input == ["last"]) { "operand:last" } else { "EOF" }
-
-        // act
-        @Expect(expected, describe(cursor.peek()))
-        @Expect(expected, describe(cursor.peek()))
-        @Expect(input, cursor.remaining())
-        @Expect(expected, describe(cursor.next()))
-
-        // assert
-        @Expect([], cursor.remaining())
-        @Expect("EOF", describe(cursor.peek()))
-        @Expect("EOF", describe(cursor.next()))
-        @Expect("EOF", describe(cursor.peek()))
+        @Expect(option, Some(Arg.Long("opt")))
+        @Expect(before, [value, "tail"])
+        @Expect(actual, value)
+        @Expect(after, ["tail"])
+        @Expect(tail, Some(Arg.Operand("tail")))
+        @Expect(cursor.next(), None)
     }
 
     @TestCase
-    func clusterRemainderContainsOnlyUnconsumedSuffix() {
+    func failedLookaheadLeavesARequiredValueAvailableAsRawText() {
         // arrange
-        let cursor = ArgCursor(["-abn=3", "tail"], shortsTakingValue: [b'n'])
-        @Expect(["-abn=3", "tail"], cursor.remaining())
+        let cursor = ArgCursor(["--opt", "-n"], shortsTakingValue: [b'n'])
+        let _ = cursor.next()
 
         // act
-        @Expect("short:a", describe(cursor.next()))
-        @Expect(["-bn=3", "tail"], cursor.remaining())
-        @Expect("short:b", describe(cursor.peek()))
-        @Expect(["-bn=3", "tail"], cursor.remaining())
-        let child = ArgCursor(cursor.remaining(), shortsTakingValue: [b'n'])
-        @Expect("short:b", describe(child.next()))
-        @Expect("short:n=3", describe(child.next()))
-        @Expect("operand:tail", describe(child.next()))
-        @Expect("EOF", describe(child.next()))
-        @Expect("short:b", describe(cursor.next()))
-        @Expect(["-n=3", "tail"], cursor.remaining())
-        @Expect("short:n=3", describe(cursor.peek()))
-        @Expect(["-n=3", "tail"], cursor.remaining())
-        @Expect("short:n=3", describe(cursor.next()))
+        let error = @AssertThrows[UsageException](cursor.peek())
+        let before = cursor.remaining()
+        let value = cursor.nextValue("--opt")
 
         // assert
-        @Expect(["tail"], cursor.remaining())
+        @Expect(error.message, "missing argument '-n'")
+        @Expect(before, ["-n"])
+        @Expect(value, "-n")
+        @Expect(cursor.next(), None)
+    }
+
+    @TestCase[input in [[], ["--"], ["last"], ["--", "last"], ["-a"]]]
+    func lastArgumentAndEofHaveStableState(input: Array<String>) {
+        // arrange
+        let cursor = ArgCursor(input)
+        let expected = if (input.contains("last")) {
+            Some(Arg.Operand("last"))
+        } else if (input == ["-a"]) {
+            Some(Arg.Short(b'a'))
+        } else {
+            None<Arg>
+        }
+
+        // act
+        let firstPeek = cursor.peek()
+        let secondPeek = cursor.peek()
+        let before = cursor.remaining()
+        let actual = cursor.next()
+        let after = cursor.remaining()
+        let eofPeek = cursor.peek()
+        let firstEof = cursor.next()
+        let secondEof = cursor.next()
+
+        // assert
+        @Expect(firstPeek, expected)
+        @Expect(secondPeek, expected)
+        @Expect(before, input)
+        @Expect(actual, expected)
+        @Expect(after, [])
+        @Expect(eofPeek, None)
+        @Expect(firstEof, None)
+        @Expect(secondEof, None)
+        @Expect(cursor.remaining(), [])
+    }
+
+    @TestCase[input in [
+        (["-abc", "tail"], [b'a', b'b', b'c']),
+        (["-abn=3", "tail"], [b'a', b'b', b'n'])
+    ]]
+    func clusterLookaheadPreservesTheUnconsumedSuffix(input: (Array<String>, Array<Byte>)) {
+        // arrange
+        let (argv, names) = input
+        let cursor = ArgCursor(argv, shortsTakingValue: [b'n'])
+        let initial = cursor.remaining()
+        let expectedLast = if (names[2] == b'n') { Arg.Short(b'n', "3") } else { Arg.Short(b'c') }
+
+        // act
+        let first = cursor.next()
+        let before = cursor.remaining()
+        let firstPeek = cursor.peek()
+        let secondPeek = cursor.peek()
+        let after = cursor.remaining()
+        let second = cursor.next()
+        let suffix = cursor.remaining()
+        let last = cursor.next()
+
+        // assert
+        @Expect(initial, argv)
+        @Expect(first, Some(Arg.Short(names[0])))
+        @Expect(before, ["-" + argv[0][2..], "tail"])
+        @Expect(firstPeek, Some(Arg.Short(names[1])))
+        @Expect(secondPeek, firstPeek)
+        @Expect(after, before)
+        @Expect(second, firstPeek)
+        @Expect(suffix, ["-" + argv[0][3..], "tail"])
+        @Expect(last, Some(expectedLast))
+        @Expect(cursor.remaining(), ["tail"])
     }
 
     @TestCase
@@ -128,11 +193,13 @@ class ArgCursorTest {
 
         // act
         let value = cursor.nextValue("--opt")
+        let remaining = cursor.remaining()
+        let tail = cursor.next()
 
         // assert
-        @Expect("-bc", value)
-        @Expect(["tail"], cursor.remaining())
-        @Expect("operand:tail", describe(cursor.next()))
+        @Expect(value, "-bc")
+        @Expect(remaining, ["tail"])
+        @Expect(tail, Some(Arg.Operand("tail")))
     }
 
     @TestCase[input in [
@@ -143,18 +210,43 @@ class ArgCursorTest {
     func subcommandHandoffPreservesOriginalArguments(input: Array<String>) {
         // arrange
         let parent = ArgCursor(input)
-        @Expect("operand:child", describe(parent.next()))
+        let command = parent.next()
 
         // act
         let _ = parent.peek()
         let forwarded = parent.remaining()
         let child = ArgCursor(forwarded)
+        let initial = child.remaining()
+        let parentArgs = ArrayList<Arg>()
+        let childArgs = ArrayList<Arg>()
+        while (let Some(arg) <- parent.next()) { parentArgs.add(arg) }
+        while (let Some(arg) <- child.next()) { childArgs.add(arg) }
 
         // assert
-        @Expect(input[1..], forwarded)
-        @Expect(forwarded, child.remaining())
-        @Expect(describe(parent.next()), describe(child.next()))
-        @Expect(parent.remaining(), child.remaining())
+        @Expect(command, Some(Arg.Operand("child")))
+        @Expect(forwarded, input[1..])
+        @Expect(initial, forwarded)
+        @Expect(childArgs.toArray(), parentArgs.toArray())
+        @Expect(child.remaining(), [])
+        @Expect(parent.remaining(), [])
+    }
+
+    @TestCase
+    func subcommandHandoffWithinAClusterPreservesOnlyUnconsumedFlags() {
+        // arrange
+        let parent = ArgCursor(["-abn=3", "tail"], shortsTakingValue: [b'n'])
+        let _ = parent.next()
+        let _ = parent.peek()
+
+        // act
+        let child = ArgCursor(parent.remaining(), shortsTakingValue: [b'n'])
+        let args = ArrayList<Arg>()
+        while (let Some(arg) <- child.next()) { args.add(arg) }
+
+        // assert
+        @Expect(args.toArray(), [Arg.Short(b'b'), Arg.Short(b'n', "3"), Arg.Operand("tail")])
+        @Expect(parent.remaining(), ["-bn=3", "tail"])
+        @Expect(child.remaining(), [])
     }
 
     @TestCase
@@ -163,15 +255,21 @@ class ArgCursorTest {
         let cursor = ArgCursor(["--", "-a", "--", "-n"])
 
         // act
-        @Expect("operand:-a", describe(cursor.peek()))
-        @Expect(["--", "-a", "--", "-n"], cursor.remaining())
-        @Expect("operand:-a", describe(cursor.next()))
-        @Expect(["--", "-n"], cursor.remaining())
-        @Expect("operand:--", describe(cursor.next()))
-        @Expect("-n", cursor.nextValue("VALUE"))
+        let lookahead = cursor.peek()
+        let before = cursor.remaining()
+        let first = cursor.next()
+        let after = cursor.remaining()
+        let second = cursor.next()
+        let value = cursor.nextValue("VALUE")
 
         // assert
-        @Expect("EOF", describe(cursor.next()))
+        @Expect(lookahead, Some(Arg.Operand("-a")))
+        @Expect(before, ["--", "-a", "--", "-n"])
+        @Expect(first, lookahead)
+        @Expect(after, ["--", "-n"])
+        @Expect(second, Some(Arg.Operand("--")))
+        @Expect(value, "-n")
+        @Expect(cursor.next(), None)
     }
 
     @TestCase[input in [["-n"], ["-abn"]]]
@@ -185,18 +283,17 @@ class ArgCursorTest {
         let before = cursor.remaining()
 
         // act
-        var failures = 0
-        for (_ in 0..2) {
-            try { let _ = cursor.peek() } catch (error: UsageException) {
-                @Expect("missing argument '-n'", error.message)
-                failures++
-            }
-            try { let _ = cursor.next() } catch (_: UsageException) { failures++ }
-        }
+        let firstPeek = @AssertThrows[UsageException](cursor.peek())
+        let secondPeek = @AssertThrows[UsageException](cursor.peek())
+        let firstNext = @AssertThrows[UsageException](cursor.next())
+        let secondNext = @AssertThrows[UsageException](cursor.next())
 
         // assert
-        @Expect(4, failures)
-        @Expect(before, cursor.remaining())
+        @Expect(firstPeek.message, "missing argument '-n'")
+        @Expect(secondPeek.message, firstPeek.message)
+        @Expect(firstNext.message, firstPeek.message)
+        @Expect(secondNext.message, firstPeek.message)
+        @Expect(cursor.remaining(), before)
     }
 
     @TestCase[input in ["-é", "-aé"]]
@@ -204,21 +301,18 @@ class ArgCursorTest {
         // arrange
         let cursor = ArgCursor([input])
         if (input == "-aé") {
-            @Expect("short:a", describe(cursor.next()))
+            let _ = cursor.next()
         }
         let before = cursor.remaining()
-        var failures = 0
 
         // act
-        try { let _ = cursor.peek() } catch (error: UsageException) {
-            @Expect("unknown option '-é'", error.message)
-            failures++
-        }
-        try { let _ = cursor.next() } catch (_: UsageException) { failures++ }
+        let peekError = @AssertThrows[UsageException](cursor.peek())
+        let nextError = @AssertThrows[UsageException](cursor.next())
 
         // assert
-        @Expect(2, failures)
-        @Expect(before, cursor.remaining())
+        @Expect(peekError.message, "unknown option '-é'")
+        @Expect(nextError.message, peekError.message)
+        @Expect(cursor.remaining(), before)
     }
 
     @TestCase
@@ -226,19 +320,15 @@ class ArgCursorTest {
         // arrange
         let cursor = ArgCursor(["--opt"])
         let _ = cursor.next()
-        var failures = 0
 
         // act
-        for (_ in 0..2) {
-            try { let _ = cursor.nextValue("--opt") } catch (error: UsageException) {
-                @Expect("missing argument '--opt'", error.message)
-                failures++
-            }
-        }
+        let first = @AssertThrows[UsageException](cursor.nextValue("--opt"))
+        let second = @AssertThrows[UsageException](cursor.nextValue("--opt"))
 
         // assert
-        @Expect(2, failures)
-        @Expect("EOF", describe(cursor.peek()))
-        @Expect([], cursor.remaining())
+        @Expect(first.message, "missing argument '--opt'")
+        @Expect(second.message, first.message)
+        @Expect(cursor.peek(), None)
+        @Expect(cursor.remaining(), [])
     }
 }

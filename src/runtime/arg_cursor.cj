@@ -1,30 +1,50 @@
 package jian.runtime
 
-/** Argument emitted by `ArgCursor`. */
+import std.deriving.*
+
+/**
+ * Argument emitted by `ArgCursor`.
+ */
+@Derive[Equatable, ToString]
 public enum Arg {
-    /** `--name`; a separate value is read with `nextValue`. */
+    /**
+     * `--name`; a separate value is read with `nextValue`.
+     */
     | Long(/* name */String)
-    /** `--name=value`, including an empty value. */
+    /**
+     * `--name=value`, including an empty value.
+     */
     | Long(/* name */String, /* value */String)
-    /** ASCII short flag, including one split from a cluster. */
+    /**
+     * ASCII short flag, including one split from a cluster.
+     */
     | Short(/* ASCII name */Byte)
-    /** ASCII short option with an attached or separate value. */
+    /**
+     * ASCII short option with an attached or separate value.
+     */
     | Short(/* ASCII name */Byte, /* value */String)
-    /** Non-option argument: a positional, subcommand name, `-`, or anything after `--`. */
+    /**
+     * Non-option argument: a positional, subcommand name, `-`, or anything after `--`.
+     */
     | Operand(String)
 }
 
-/** Traverses argv, splitting short options using their declared value requirements. */
+/**
+ * Traverses argv, splitting short options using their declared value requirements.
+ */
 public class ArgCursor {
     private var position: Int64 = 0
     private var shortOffset: Int64 = 0
     private var optionsEnded: Bool = false
 
-    /** `shortsTakingValue` contains ASCII names whose suffix or following argv is their value. */
+    /**
+     * `shortsTakingValue` contains ASCII names whose suffix or following argv is their value.
+     */
     public ArgCursor(private let argv: Array<String>, private let shortsTakingValue!: Array<Byte> = []) {}
 
     /**
-     * Returns the next argument without consuming it; None at EOF.
+     * Returns the next argument without consuming it; `None` at the end.
+     *
      * throws UsageException for a missing value or non-ASCII short name.
      */
     public func peek(): ?Arg {
@@ -33,7 +53,8 @@ public class ArgCursor {
     }
 
     /**
-     * Consumes one argument; returns None at EOF.
+     * Consumes one argument; returns `None` at the end.
+     *
      * throws UsageException for a missing value or non-ASCII short name.
      */
     public func next(): ?Arg {
@@ -47,6 +68,7 @@ public class ArgCursor {
     /**
      * Consumes the next raw argv, even `--` or option-looking text, as a required value.
      * Within a partial cluster, consumes its reconstructed `-suffix` instead.
+     *
      * throws UsageException naming `option` when no input remains.
      */
     public func nextValue(option: String): String {
