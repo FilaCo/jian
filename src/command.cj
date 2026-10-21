@@ -2,12 +2,16 @@ macro package jian
 
 import std.ast.*
 
-/** Generates a typed CLI adapter beside the unchanged command function. */
+/**
+ * Generates a typed CLI adapter beside the unchanged command function.
+ */
 public macro Command(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input)
 }
 
-/** Attribute-free form of `@Command`. */
+/**
+ * Attribute-free form of `@Command`.
+ */
 public macro Command(input: Tokens): Tokens {
     commandAdapter(Tokens(), input)
 }
