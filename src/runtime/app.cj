@@ -7,7 +7,7 @@ import std.io.OutputStream
 /**
  * Explicitly registered commands and sub-apps, with optional app-level options.
  * `stderr` receives usage errors and is never closed by the app.
- * Nested apps use the root app's stream and report the full command path.
+ * During run, nested apps use this app's stream and report the full command path.
  */
 public class App {
     private let commands = ArrayList<Command>()
