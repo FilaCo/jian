@@ -1,4 +1,4 @@
-package jian.command_tests
+package jian.api_tests
 
 import jian.*
 import std.unittest.*
