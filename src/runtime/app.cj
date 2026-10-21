@@ -7,6 +7,7 @@ import std.io.OutputStream
 /**
  * Explicitly registered commands and sub-apps, with optional app-level options.
  * `stderr` receives usage errors and is never closed by the app.
+ * Nested apps use the root app's stream and report the full command path.
  */
 public class App {
     private let commands = ArrayList<Command>()
@@ -16,21 +17,32 @@ public class App {
     public App(public let name!: String, public let help!: String = "",
         private let stderr!: OutputStream = getStdErr()) {}
 
-    /** Registers a command; duplicate command or sub-app names are rejected. */
+    /**
+     * Registers a command and returns this app for chaining.
+     *
+     * throws IllegalArgumentException if a command or sub-app already has this name.
+     */
     public func add(command: Command): App {
         requireAvailable(command.name)
         commands.add(command)
         this
     }
 
-    /** Registers a sub-app under its name; duplicate names are rejected. */
+    /**
+     * Registers a sub-app under its name and returns this app for chaining.
+     *
+     * throws IllegalArgumentException if a command or sub-app already has this name.
+     */
     public func add(app: App): App {
         requireAvailable(app.name)
         apps.add(app)
         this
     }
 
-    /** Sets the callback that consumes app options before command dispatch. */
+    /**
+     * Sets the callback that consumes app options before command dispatch,
+     * replacing any previous callback. Returns this app for chaining.
+     */
     public func callback(value: Callback): App {
         appCallback = Some(value)
         this
