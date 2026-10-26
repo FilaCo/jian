@@ -39,9 +39,10 @@ func cliName(name: String): String {
 
 func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Tokens {
     let declaration = FuncDecl(input)
+    let suffix = if (callback) { "Callback" } else { "Command" }
     if (declaration.isGenericDecl) {
         diagReport(DiagReportLevel.ERROR, declaration.genericParam.toTokens(),
-            "@JianCommand does not take generic functions", "use a concrete command function")
+            "@Jian${suffix} does not take generic functions", "use a concrete command function")
         return input
     }
     if (declaration.colon.kind == TokenKind.COLON) {
@@ -49,13 +50,12 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let spelling = result.toString().replace(" ", "")
         if (spelling != "Unit" && spelling != "Int64") {
             diagReport(DiagReportLevel.ERROR, result,
-                "@JianCommand return type must be Unit or Int64", "omit the return type to let the compiler infer it")
+                "@Jian${suffix} return type must be Unit or Int64", "omit the return type to let the compiler infer it")
             return input
         }
     }
     let functionName = declaration.identifier
     let sourceName = functionName.value.replace("`", "")
-    let suffix = if (callback) { "Callback" } else { "Command" }
     let interfaceName = Token(TokenKind.IDENTIFIER, "Jian" + suffix)
     let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
