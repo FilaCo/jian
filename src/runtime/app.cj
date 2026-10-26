@@ -1,13 +1,14 @@
 package jian.runtime
 
 import std.collection.ArrayList
-import std.env.getStdErr
+import std.env.{getStdErr, getStdOut}
 import std.io.OutputStream
+import std.sort.sort
 
 /**
  * Explicitly registered commands and sub-apps, with optional app-level options.
- * `stderr` receives usage errors and is never closed by the app.
- * During run, nested apps use this app's stream and report the full command path.
+ * `stdout` receives help and `stderr` receives usage errors; neither stream is closed.
+ * During run, nested apps use this app's streams and report the full command path.
  */
 public class JianApp {
     private let commands = ArrayList<JianCommand>()
@@ -15,7 +16,8 @@ public class JianApp {
     private var appCallback: ?JianCallback = None
 
     public JianApp(public let name!: String, public let help!: String = "",
-        private let stderr!: OutputStream = getStdErr()) {}
+        private let stderr!: OutputStream = getStdErr(),
+        private let stdout!: OutputStream = getStdOut()) {}
 
     /**
      * Registers a command and returns this app for chaining.
@@ -51,21 +53,29 @@ public class JianApp {
     /**
      * Runs argv excluding the executable name and returns the command's exit code.
      * A nonzero callback code stops dispatch. A callback alone may run without a command.
-     * JianUsageException prints an error and basic usage to stderr and returns 2;
+     * `--help` or `-h` prints help to stdout and returns 0 without invoking the target.
+     * Ancestor callbacks still run before help for a nested target.
+     * JianUsageException prints an error and usage to stderr and returns 2;
      * other exceptions propagate to the caller.
      */
     public func run(argv: Array<String>): Int64 {
-        dispatch(argv, name, stderr)
+        dispatch(argv, name, stdout, stderr)
     }
 
-    private func dispatch(argv: Array<String>, path: String, errors: OutputStream): Int64 {
-        var usage = "Usage: ${path} [OPTIONS] COMMAND [ARGS]...\n"
+    private func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream): Int64 {
+        let spec = match (appCallback) {
+            case Some(value) => value.spec
+            case None => JianCommandSpec()
+        }
+        let hasCommands = !commands.isEmpty() || !apps.isEmpty() || appCallback.isNone()
+        var usage = usageLine(path, spec, commands: hasCommands)
         try {
-            let shorts = match (appCallback) {
-                case Some(value) => valueShorts(value.spec)
-                case None => Array<Byte>()
+            if (requestsHelp(argv, spec, app: true)) {
+                output.write(appHelp(path, spec, hasCommands).toArray())
+                output.flush()
+                return 0
             }
-            let args = JianArgCursor(argv, shortsTakingValue: shorts)
+            let args = JianArgCursor(argv, shortsTakingValue: valueShorts(spec))
             if (let Some(value) <- appCallback) {
                 let code = value.run(args)
                 if (code != 0) {
@@ -90,14 +100,22 @@ public class JianApp {
             }
             for (command in commands) {
                 if (command.name == commandName) {
-                    usage = "Usage: ${path} ${commandName} [ARGS]...\n"
-                    return command.run(JianArgCursor(args.remaining(), shortsTakingValue: valueShorts(command.spec)))
+                    let commandSpec = command.spec
+                    let commandPath = path + " " + commandName
+                    usage = usageLine(commandPath, commandSpec)
+                    let remaining = args.remaining()
+                    if (requestsHelp(remaining, commandSpec)) {
+                        output.write(commandHelp(commandPath, commandSpec).toArray())
+                        output.flush()
+                        return 0
+                    }
+                    return command.run(JianArgCursor(remaining, shortsTakingValue: valueShorts(commandSpec)))
                 }
             }
             for (app in apps) {
                 if (app.name == commandName) {
-                    // Nested failures use the full invocation and the root's injected stream.
-                    return app.dispatch(args.remaining(), path + " " + commandName, errors)
+                    // Nested help and failures use the full invocation and the root's streams.
+                    return app.dispatch(args.remaining(), path + " " + commandName, output, errors)
                 }
             }
             throw JianUsageException("unknown command '${commandName}'")
@@ -106,6 +124,25 @@ public class JianApp {
             errors.flush()
             2
         }
+    }
+
+    private func appHelp(path: String, spec: JianCommandSpec, hasCommands: Bool): String {
+        var text = usageLine(path, spec, commands: hasCommands)
+        if (!help.isEmpty()) { text += "\n" + help + "\n" }
+        if (!spec.help.isEmpty()) { text += "\n" + spec.help + "\n" }
+        text += parameterHelp(spec)
+        let names = commands.toArray().map({ command => command.name }).concat(apps.toArray().map({ app => app.name }))
+        sort(names)
+        if (!names.isEmpty()) { text += "\nCommands:\n" }
+        for (entry in names) {
+            for (command in commands) {
+                if (command.name == entry) { text += helpRow(entry, command.spec.help) }
+            }
+            for (app in apps) {
+                if (app.name == entry) { text += helpRow(entry, app.help) }
+            }
+        }
+        text
     }
 
     private func requireAvailable(value: String): Unit {
@@ -122,7 +159,7 @@ public class JianApp {
     }
 }
 
-private func valueShorts(spec: JianCommandSpec): Array<Byte> {
+func valueShorts(spec: JianCommandSpec): Array<Byte> {
     let shorts = ArrayList<Byte>()
     for (input in spec.inputs) {
         if (input.kind == JianInputKind.ValueOption) {
