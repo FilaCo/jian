@@ -39,6 +39,20 @@ func cliName(name: String): String {
 
 func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
     let declaration = FuncDecl(input)
+    if (declaration.isGenericDecl) {
+        diagReport(DiagReportLevel.ERROR, declaration.genericParam.toTokens(),
+            "@Command does not take generic functions", "use a concrete command function")
+        return input
+    }
+    if (declaration.colon.kind == TokenKind.COLON) {
+        let result = declaration.declType.toTokens()
+        let spelling = result.toString().replace(" ", "")
+        if (spelling != "Unit" && spelling != "Int64") {
+            diagReport(DiagReportLevel.ERROR, result,
+                "@Command return type must be Unit or Int64", "omit the return type to let the compiler infer it")
+            return input
+        }
+    }
     let functionName = declaration.identifier
     let sourceName = functionName.value.replace("`", "")
     let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + "Command")
@@ -60,18 +74,43 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
     var bindings = Tokens()
     var arguments = Tokens()
     var positional = 0
+    var names: Array<String> = []
     for (index in 0..declaration.funcParams.size) {
         let parameter = declaration.funcParams[index]
         let identifier = parameter.identifier
         let typeName = parameter.paramType.toTokens()
         let slot = Token(TokenKind.IDENTIFIER, "__jian_value_${index}")
         let cli = cliName(identifier.value.replace("`", ""))
+        if (names.contains(cli)) {
+            diagReport(DiagReportLevel.ERROR, quote($(identifier)),
+                "duplicate CLI parameter name '--${cli}'", "use distinct names after kebab-case conversion")
+            return input
+        }
+        if (cli == "help") {
+            diagReport(DiagReportLevel.ERROR, quote($(identifier)),
+                "parameter name '--help' is reserved", "choose another parameter name")
+            return input
+        }
+        names = names.concat([cli])
         let cliLiteral = Token(TokenKind.STRING_LITERAL, cli)
         let optionLabel = Token(TokenKind.STRING_LITERAL, "--" + cli)
         let named = parameter.not.kind == TokenKind.NOT
         let label = if (named) { optionLabel } else { Token(TokenKind.STRING_LITERAL, cli.toAsciiUpper()) }
         let hasDefault = parameter.assign.kind == TokenKind.ASSIGN
-        let repeated = typeName.toString().replace(" ", "").startsWith("Array<")
+        let repeated = match (parameter.paramType as RefType) {
+            case Some(reference) => reference.identifier.value == "Array" && reference.typeArguments.size == 1
+            case None => false
+        }
+        if (repeated && !named) {
+            for (later in index + 1..declaration.funcParams.size) {
+                if (declaration.funcParams[later].not.kind != TokenKind.NOT) {
+                    diagReport(DiagReportLevel.ERROR, typeName,
+                        "variadic Array parameter must be the last positional parameter",
+                        "move this parameter after all other positional parameters")
+                    return input
+                }
+            }
+        }
         let repeatable = if (repeated) { quote(true) } else { quote(false) }
         let kind = if (named) {
             quote(if (takesValueAs<$(typeName)>()) { ParamKind.ValueOption } else { ParamKind.Flag })
@@ -100,6 +139,8 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
             )
         } else {
             let ordinal = Token(TokenKind.INTEGER_LITERAL, positional.toString())
+            // Keep the cursor on the final array so later operands accumulate in it.
+            let advance = if (repeated) { Tokens() } else { quote(__jian_position++) }
             operands += quote(
                 if (__jian_position == $(ordinal)) {
                     try {
@@ -107,7 +148,7 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
                     } catch (__jian_error: InvalidValueException) {
                         throw UsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
                     }
-                    __jian_position++
+                    $(advance)
                     continue
                 }
             )

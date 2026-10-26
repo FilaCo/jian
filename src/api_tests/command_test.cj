@@ -1,6 +1,7 @@
 package jian.api_tests
 
 import jian.*
+import std.fs.Path
 import std.unittest.*
 import std.unittest.testmacro.*
 
@@ -63,8 +64,60 @@ func aliases(enabled!: Switch, jobs!: MaybeJobs): Int64 {
 @Command
 func camelCase(): Int64 { 8 }
 
+@Command
+func copyFiles(destination: String, files: Array<Path>, verbose!: Bool): Int64 {
+    observed = "${destination}:${files}:${verbose}"
+    files.size
+}
+
+@Command
+func sumValues(values: Array<Int64>): Int64 {
+    var total: Int64 = 0
+    for (value in values) { total += value }
+    total
+}
+
+@Command
+func overloaded(value: String): Int64 { value.size }
+
+func overloaded(value: Int64): Int64 { value }
+
 @Test
 class CommandMacroTest {
+    @TestCase
+    func variadic_paths_collect_remaining_operands_around_named_options() {
+        // arrange
+        let command = CopyFilesCommand()
+
+        // act
+        let code = command.run(ArgCursor(["out", "first", "--verbose", "second", "--", "--third"]))
+
+        // assert
+        @Expect(code, 3)
+        @Expect(observed, "out:[first, second, --third]:true")
+        @Expect(command.spec.params[1].repeatable, true)
+        @Expect(command.spec.params[1].required, false)
+        @Expect(command.spec.params[1].metavar, "PATH...")
+        @Expect(command.run(ArgCursor(["out"])), 0)
+        @Expect(observed, "out:[]:false")
+    }
+
+    @TestCase
+    func variadic_elements_keep_their_declared_type_and_report_invalid_values() {
+        // arrange
+        let command = SumValuesCommand()
+
+        // act
+        let total = command.run(ArgCursor(["1", "2", "3"]))
+        let invalid = @AssertThrows[UsageException](command.run(ArgCursor(["1", "bad"])))
+
+        // assert
+        @Expect(total, 6)
+        @Expect(command.run(ArgCursor([])), 0)
+        @Expect(invalid.message, "invalid value 'bad' for 'VALUES': expected Int64")
+        @Expect(OverloadedCommand().run(ArgCursor(["hello"])), 5)
+    }
+
     @TestCase
     func generates_metadata_and_typed_positional_and_named_parsing() {
         // arrange
