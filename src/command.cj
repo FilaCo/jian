@@ -57,8 +57,11 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
     var storage = Tokens()
     var options = Tokens()
     var operands = Tokens()
+    var shorts = Tokens()
     var bindings = Tokens()
     var arguments = Tokens()
+    let metadata = getChildMessages("Param")
+    var usedShorts = ""
     var positional = 0
     for (index in 0..declaration.funcParams.size) {
         let parameter = declaration.funcParams[index]
@@ -73,6 +76,34 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
         let hasDefault = parameter.assign.kind == TokenKind.ASSIGN
         let repeated = typeName.toString().replace(" ", "").startsWith("Array<")
         let repeatable = if (repeated) { quote(true) } else { quote(false) }
+        var short = quote(None)
+        var paramHelp = quote("")
+        var hidden = quote(false)
+        var markers = 0
+        for (message in metadata) {
+            if (!message.hasItem("param") || message.getString("param") != identifier.value) { continue }
+            markers++
+            if (markers > 1) { throw ASTException("apply @Param only once per parameter") }
+            if (message.hasItem("help")) { paramHelp = message.getTokens("help") }
+            if (message.hasItem("hidden")) { hidden = message.getTokens("hidden") }
+            if (message.hasItem("short")) {
+                if (!named) { throw ASTException("short name requires a named parameter") }
+                let spelling = message.getTokens("short").toString().trimAscii()
+                if (spelling.size != 3 || !spelling.startsWith("'") || !spelling.endsWith("'") ||
+                    spelling.toArray()[1] > 127) {
+                    throw ASTException("short name must be a single ASCII character literal")
+                }
+                let alias = spelling[1..2]
+                if (alias == "h") { throw ASTException("short name '-h' is reserved for help") }
+                if (usedShorts.contains(alias)) { throw ASTException("duplicate short name '-${alias}'") }
+                usedShorts += alias
+                let byte = Token(TokenKind.INTEGER_LITERAL, spelling.toArray()[1].toString())
+                short = quote(Some(UInt8($(byte))))
+                shorts += quote(
+                    if (__jian_short == UInt8($(byte))) { __jian_name = $(cliLiteral); }
+                )
+            }
+        }
         let kind = if (named) {
             quote(if (takesValueAs<$(typeName)>()) { ParamKind.ValueOption } else { ParamKind.Flag })
         } else { quote(ParamKind.Positional) }
@@ -82,7 +113,7 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
         } else { quote(None) }
         let required = if (hasDefault) { quote(false) } else { quote(whenAbsentAs<$(typeName)>().isNone()) }
         specs += quote(ParamSpec($(cliLiteral), kind: $(kind), metavar: metavarAs<$(typeName)>(),
-            defaultShown: $(shown), required: $(required), repeatable: $(repeatable)),)
+            short: $(short), help: $(paramHelp), hidden: $(hidden), defaultShown: $(shown), required: $(required), repeatable: $(repeatable)),)
         storage += quote(var $(slot): Option<$(typeName)> = None;)
         if (named) {
             options += quote(
@@ -139,9 +170,16 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
                             __jian_name = __jian_long
                             __jian_attached = Some(__jian_raw)
                         case Arg.Short(__jian_short) =>
-                            throw UsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
-                        case Arg.Short(__jian_short, _) =>
-                            throw UsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
+                            $(shorts)
+                            if (__jian_name.isEmpty()) {
+                                throw UsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
+                            }
+                        case Arg.Short(__jian_short, __jian_raw) =>
+                            $(shorts)
+                            if (__jian_name.isEmpty()) {
+                                throw UsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
+                            }
+                            __jian_attached = Some(__jian_raw)
                     }
                     $(options)
                     throw UsageException.unknownOption("--" + __jian_name)
