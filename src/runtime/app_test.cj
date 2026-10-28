@@ -3,33 +3,33 @@ package jian.runtime
 import std.collection.ArrayList
 import std.io.ByteBuffer
 
-private class TestCommand <: Command {
+private class TestCommand <: JianCommand {
     private let commandName: String
     public prop name: String { get() { commandName } }
-    private let commandSpec: CommandSpec
-    public prop spec: CommandSpec { get() { commandSpec } }
-    private let action: (ArgCursor) -> Int64
+    private let commandSpec: JianCommandSpec
+    public prop spec: JianCommandSpec { get() { commandSpec } }
+    private let action: (JianArgCursor) -> Int64
 
-    public init(name: String, action: (ArgCursor) -> Int64, spec!: CommandSpec = CommandSpec()) {
+    public init(name: String, action: (JianArgCursor) -> Int64, spec!: JianCommandSpec = JianCommandSpec()) {
         this.commandName = name
         this.action = action
         this.commandSpec = spec
     }
 
-    public func run(args: ArgCursor): Int64 { action(args) }
+    public func run(args: JianArgCursor): Int64 { action(args) }
 }
 
-private class TestCallback <: Callback {
-    private let commandSpec: CommandSpec
-    public prop spec: CommandSpec { get() { commandSpec } }
-    private let action: (ArgCursor) -> Int64
+private class TestCallback <: JianCallback {
+    private let commandSpec: JianCommandSpec
+    public prop spec: JianCommandSpec { get() { commandSpec } }
+    private let action: (JianArgCursor) -> Int64
 
-    public init(action: (ArgCursor) -> Int64, spec!: CommandSpec = CommandSpec()) {
+    public init(action: (JianArgCursor) -> Int64, spec!: JianCommandSpec = JianCommandSpec()) {
         this.action = action
         this.commandSpec = spec
     }
 
-    public func run(args: ArgCursor): Int64 { action(args) }
+    public func run(args: JianArgCursor): Int64 { action(args) }
 }
 
 @Test
@@ -38,7 +38,7 @@ class AppTest {
     func dispatchUsesTheRegisteredNameAndPreservesCommandArguments() {
         // arrange
         let received = ArrayList<String>()
-        let app = App(name: "demo").add(TestCommand("sync", { args =>
+        let app = JianApp(name: "demo").add(TestCommand("sync", { args =>
             received.add(all: args.remaining())
             7
         }))
@@ -54,7 +54,7 @@ class AppTest {
     @TestCase
     func aCommandMayHaveTheSameNameAsTheApp() {
         // arrange
-        let app = App(name: "demo").add(TestCommand("demo", { _ => 9 }))
+        let app = JianApp(name: "demo").add(TestCommand("demo", { _ => 9 }))
 
         // act
         let code = app.run(["demo"])
@@ -67,12 +67,12 @@ class AppTest {
     func nestedAppsDispatchAndRunCallbacksInOrder() {
         // arrange
         let events = ArrayList<String>()
-        let child = App(name: "admin")
+        let child = JianApp(name: "admin")
             .callback(TestCallback({ _ => events.add("child"); 0 }))
             .add(TestCommand("sync", { _ => events.add("command"); 3 }))
-        let app = App(name: "demo")
+        let app = JianApp(name: "demo")
             .callback(TestCallback({ args =>
-                @Expect(args.next(), Some(Arg.Long("verbose")))
+                @Expect(args.next(), Some(JianArg.Long("verbose")))
                 events.add("root")
                 0
             }))
@@ -90,16 +90,16 @@ class AppTest {
     func shortValueOptionsAreConfiguredForCallbacksAndCommands() {
         // arrange
         let values = ArrayList<String>()
-        let spec = CommandSpec(params: [ParamSpec("number", kind: ParamKind.ValueOption, short: b'n')])
-        let app = App(name: "demo")
+        let spec = JianCommandSpec(inputs: [JianInputSpec("number", kind: JianInputKind.ValueOption, short: b'n')])
+        let app = JianApp(name: "demo")
             .callback(TestCallback({ args =>
-                @Expect(args.next(), Some(Arg.Short(b'n', "42")))
-                @Expect(args.peek(), Some(Arg.Operand("sync")))
+                @Expect(args.next(), Some(JianArg.Short(b'n', "42")))
+                @Expect(args.peek(), Some(JianArg.Operand("sync")))
                 values.add("callback")
                 0
             }, spec: spec))
             .add(TestCommand("sync", { args =>
-                @Expect(args.next(), Some(Arg.Short(b'n', "17")))
+                @Expect(args.next(), Some(JianArg.Short(b'n', "17")))
                 values.add("command")
                 0
             }, spec: spec))
@@ -116,7 +116,7 @@ class AppTest {
     func unknownCommandReportsAnErrorAndUsage() {
         // arrange
         let errors = ByteBuffer()
-        let app = App(name: "demo", stderr: errors)
+        let app = JianApp(name: "demo", stderr: errors)
 
         // act
         let code = app.run(["absent"])
@@ -131,9 +131,9 @@ class AppTest {
         // arrange
         let errors = ByteBuffer()
         let childErrors = ByteBuffer()
-        let child = App(name: "admin", stderr: childErrors)
-            .add(TestCommand("sync", { _ => throw UsageException.missingArgument("PATH") }))
-        let app = App(name: "demo", stderr: errors).add(child)
+        let child = JianApp(name: "admin", stderr: childErrors)
+            .add(TestCommand("sync", { _ => throw JianUsageException.missingArgument("PATH") }))
+        let app = JianApp(name: "demo", stderr: errors).add(child)
 
         // act
         let code = app.run(["admin", "sync"])
@@ -148,7 +148,7 @@ class AppTest {
     func commandExceptionsPropagateWithoutWritingAUsageError() {
         // arrange
         let errors = ByteBuffer()
-        let app = App(name: "demo", stderr: errors)
+        let app = JianApp(name: "demo", stderr: errors)
             .add(TestCommand("sync", { _ => throw IllegalStateException("command failed") }))
 
         // act
@@ -163,7 +163,7 @@ class AppTest {
     func nonzeroCallbackStopsCommandDispatch() {
         // arrange
         let calls = ArrayList<Bool>()
-        let app = App(name: "demo")
+        let app = JianApp(name: "demo")
             .callback(TestCallback({ _ => 5 }))
             .add(TestCommand("sync", { _ => calls.add(true); 0 }))
 
@@ -179,7 +179,7 @@ class AppTest {
     func callbackOnlyAppMayRunWithoutACommand() {
         // arrange
         let calls = ArrayList<Bool>()
-        let app = App(name: "demo").callback(TestCallback({ _ => calls.add(true); 0 }))
+        let app = JianApp(name: "demo").callback(TestCallback({ _ => calls.add(true); 0 }))
 
         // act
         let code = app.run([])
@@ -193,7 +193,7 @@ class AppTest {
     func missingCommandsAndUnknownAppOptionsAreUsageErrors(input: Array<String>) {
         // arrange
         let errors = ByteBuffer()
-        let app = App(name: "demo", stderr: errors)
+        let app = JianApp(name: "demo", stderr: errors)
 
         // act
         let code = app.run(input)
@@ -207,8 +207,8 @@ class AppTest {
     func callbackUsageErrorsAreReportedBeforeDispatch() {
         // arrange
         let errors = ByteBuffer()
-        let app = App(name: "demo", stderr: errors)
-            .callback(TestCallback({ _ => throw UsageException.missingArgument("--config") }))
+        let app = JianApp(name: "demo", stderr: errors)
+            .callback(TestCallback({ _ => throw JianUsageException.missingArgument("--config") }))
 
         // act
         let code = app.run(["sync"])
@@ -221,10 +221,10 @@ class AppTest {
     @TestCase
     func duplicateNamesAreRejectedAcrossCommandsAndSubApps() {
         // arrange
-        let app = App(name: "demo").add(TestCommand("sync", { _ => 0 }))
+        let app = JianApp(name: "demo").add(TestCommand("sync", { _ => 0 }))
 
         // act
-        let error = @AssertThrows[IllegalArgumentException](app.add(App(name: "sync")))
+        let error = @AssertThrows[IllegalArgumentException](app.add(JianApp(name: "sync")))
 
         // assert
         @Expect(error.message, "duplicate command 'sync'")

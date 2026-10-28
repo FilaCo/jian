@@ -3,10 +3,10 @@ package jian.runtime
 import std.deriving.*
 
 /**
- * Argument emitted by `ArgCursor`.
+ * Argument emitted by `JianArgCursor`.
  */
 @Derive[Equatable, ToString]
-public enum Arg {
+public enum JianArg {
     /**
      * `--name`; a separate value is read with `nextValue`.
      */
@@ -32,7 +32,7 @@ public enum Arg {
 /**
  * Traverses argv, splitting short options using their declared value requirements.
  */
-public class ArgCursor {
+public class JianArgCursor {
     private var position: Int64 = 0
     private var shortOffset: Int64 = 0
     private var optionsEnded: Bool = false
@@ -40,14 +40,14 @@ public class ArgCursor {
     /**
      * `shortsTakingValue` contains ASCII names whose suffix or following argv is their value.
      */
-    public ArgCursor(private let argv: Array<String>, private let shortsTakingValue!: Array<Byte> = []) {}
+    public JianArgCursor(private let argv: Array<String>, private let shortsTakingValue!: Array<Byte> = []) {}
 
     /**
      * Returns the next argument without consuming it; `None` at the end.
      *
-     * throws UsageException for a missing value or non-ASCII short name.
+     * throws JianUsageException for a missing value or non-ASCII short name.
      */
-    public func peek(): ?Arg {
+    public func peek(): ?JianArg {
         let (arg, _, _, _) = read()
         arg
     }
@@ -55,9 +55,9 @@ public class ArgCursor {
     /**
      * Consumes one argument; returns `None` at the end.
      *
-     * throws UsageException for a missing value or non-ASCII short name.
+     * throws JianUsageException for a missing value or non-ASCII short name.
      */
-    public func next(): ?Arg {
+    public func next(): ?JianArg {
         let (arg, nextPosition, nextOffset, ended) = read()
         position = nextPosition
         shortOffset = nextOffset
@@ -69,11 +69,11 @@ public class ArgCursor {
      * Consumes the next raw argv, even `--` or option-looking text, as a required value.
      * Within a partial cluster, consumes its reconstructed `-suffix` instead.
      *
-     * throws UsageException naming `option` when no input remains.
+     * throws JianUsageException naming `option` when no input remains.
      */
     public func nextValue(option: String): String {
         if (position == argv.size) {
-            throw UsageException.missingArgument(option)
+            throw JianUsageException.missingArgument(option)
         }
         let value = if (shortOffset == 0) { argv[position] } else { "-" + argv[position][shortOffset..] }
         position++
@@ -98,13 +98,13 @@ public class ArgCursor {
      * Computes the next state without committing it: lookahead cannot classify a
      * required raw value irreversibly, nor consume a marker or part of a cluster.
      */
-    private func read(): (?Arg, Int64, Int64, Bool) {
+    private func read(): (?JianArg, Int64, Int64, Bool) {
         var index = position
         var ended = optionsEnded
         while (index < argv.size) {
             let raw = argv[index]
             if (ended || raw == "-" || !raw.startsWith("-")) {
-                return (Some(Arg.Operand(raw)), index + 1, 0, ended)
+                return (Some(JianArg.Operand(raw)), index + 1, 0, ended)
             }
             if (raw == "--") {
                 ended = true
@@ -113,34 +113,34 @@ public class ArgCursor {
             }
             if (raw.startsWith("--")) {
                 let parts = raw[2..].split("=", 2)
-                let arg = if (parts.size == 2) { Arg.Long(parts[0], parts[1]) } else { Arg.Long(parts[0]) }
+                let arg = if (parts.size == 2) { JianArg.Long(parts[0], parts[1]) } else { JianArg.Long(parts[0]) }
                 return (Some(arg), index + 1, 0, ended)
             }
             let offset = if (shortOffset == 0) { 1 } else { shortOffset }
             let name = raw.toArray()[offset]
             if (name > 127) {
-                throw UsageException.unknownOption("-" + raw[offset..])
+                throw JianUsageException.unknownOption("-" + raw[offset..])
             }
             if (shortsTakingValue.contains(name)) {
                 let suffix = raw[offset + 1..]
                 if (!suffix.isEmpty()) {
                     let value = if (suffix.startsWith("=")) { suffix[1..] } else { suffix }
-                    return (Some(Arg.Short(name, value)), index + 1, 0, ended)
+                    return (Some(JianArg.Short(name, value)), index + 1, 0, ended)
                 }
                 if (index + 1 == argv.size) {
-                    throw UsageException.missingArgument("-" + raw[offset..])
+                    throw JianUsageException.missingArgument("-" + raw[offset..])
                 }
-                return (Some(Arg.Short(name, argv[index + 1])), index + 2, 0, ended)
+                return (Some(JianArg.Short(name, argv[index + 1])), index + 2, 0, ended)
             }
             // `-o=value` is explicit even if the caller does not declare o as
             // value-taking; generated parsers decide whether that form is valid.
             if (offset + 1 < raw.size && raw[offset + 1..].startsWith("=")) {
-                return (Some(Arg.Short(name, raw[offset + 2..])), index + 1, 0, ended)
+                return (Some(JianArg.Short(name, raw[offset + 2..])), index + 1, 0, ended)
             }
             if (offset + 1 == raw.size) {
-                return (Some(Arg.Short(name)), index + 1, 0, ended)
+                return (Some(JianArg.Short(name)), index + 1, 0, ended)
             }
-            return (Some(Arg.Short(name)), index, offset + 1, ended)
+            return (Some(JianArg.Short(name)), index, offset + 1, ended)
         }
         (None, index, 0, ended)
     }

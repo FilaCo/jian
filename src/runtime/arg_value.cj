@@ -5,7 +5,7 @@ import std.convert.Parsable
 /**
  * Per-type CLI behavior, resolved statically even through type aliases.
  */
-public interface ArgValue<T> {
+public interface JianArgValue<T> {
     /**
      * Whether an occurrence consumes a value; false for flags.
      */
@@ -20,12 +20,12 @@ public interface ArgValue<T> {
      * Accepts one occurrence, appending for arrays and replacing other values.
      * `prev` is the accumulated value; `raw = None` denotes a bare flag.
      *
-     * throws InvalidValueException for invalid input, UsageException for a missing value.
+     * throws JianInvalidValueException for invalid input, JianUsageException for a missing value.
      */
     static func accept(prev: ?T, raw: ?String): T
 
     /**
-     * Value when omitted; outer `None` means the parameter is required.
+     * Value when omitted; outer `None` means the argument or option is required.
      */
     static func whenAbsent(): ?T
 }
@@ -33,26 +33,26 @@ public interface ArgValue<T> {
 /**
  * Accepts one occurrence using T's CLI behavior; preserves its exceptions.
  */
-public func acceptAs<T>(prev: ?T, raw: ?String): T where T <: ArgValue<T> {
+public func jianAcceptAs<T>(prev: ?T, raw: ?String): T where T <: JianArgValue<T> {
     T.accept(prev, raw)
 }
 
 /**
- * throws UsageException if the occurrence has no value.
+ * throws JianUsageException if the occurrence has no value.
  */
 func requiredValue(raw: ?String): String {
-    raw ?? throw UsageException("missing argument value")
+    raw ?? throw JianUsageException("missing argument value")
 }
 
 /**
- * throws InvalidValueException if parsing fails.
+ * throws JianInvalidValueException if parsing fails.
  */
 func parseValue<T>(raw: ?String, expected: String): T where T <: Parsable<T> {
     let text = requiredValue(raw)
     try {
-        T.tryParse(text) ?? throw InvalidValueException(text, expected)
+        T.tryParse(text) ?? throw JianInvalidValueException(text, expected)
     } catch (_: IllegalArgumentException) {
         // SDK parsers can also reject malformed UTF-8 by throwing.
-        throw InvalidValueException(text, expected)
+        throw JianInvalidValueException(text, expected)
     }
 }

@@ -4,20 +4,20 @@ import std.ast.*
 import std.collection.HashMap
 
 /**
- * Generates ArgValue extensions from `value<Types...>(metavar: ..., accept: ...)` entries.
+ * Generates JianArgValue extensions from `value<Types...>(metavar: ..., accept: ...)` entries.
  * Defaults: takesValue is true, whenAbsent is None, accept uses Parsable, metavar is empty.
  * The accept expression can use `raw`; a group shares its settings across all listed types.
  */
-public macro ArgValues(input: Tokens): Tokens {
+public macro JianArgValues(input: Tokens): Tokens {
     argValues(input, quote(extend), Tokens(), quote(_))
 }
 
 /**
- * Generates container extensions with a type parameter constrained to ArgValue.
+ * Generates container extensions with a type parameter constrained to JianArgValue.
  * The accept expression can also use `prev` to accumulate occurrences.
  */
-public macro ArgValues(attrs: Tokens, input: Tokens): Tokens {
-    argValues(input, quote(extend<$(attrs)>), quote(where $(attrs) <: ArgValue<$(attrs)>), quote(prev))
+public macro JianArgValues(attrs: Tokens, input: Tokens): Tokens {
+    argValues(input, quote(extend<$(attrs)>), quote(where $(attrs) <: JianArgValue<$(attrs)>), quote(prev))
 }
 
 func argValues(input: Tokens, header: Tokens, constraint: Tokens, previous: Tokens): Tokens {
@@ -33,16 +33,16 @@ func argValues(input: Tokens, header: Tokens, constraint: Tokens, previous: Toke
         let entry = CallExpr(expression.toTokens())
         let types = RefExpr(entry.callFunc.toTokens())
         if (types.identifier.value != "value" || types.typeArguments.isEmpty()) {
-            throw ASTException("ArgValues expects value<Types...>(named settings)")
+            throw ASTException("JianArgValues expects value<Types...>(named settings)")
         }
         let settings = HashMap<String, Tokens>()
         for (argument in entry.arguments) {
             let name = argument.identifier.value
             if (!["metavar", "takesValue", "whenAbsent", "accept"].contains(name)) {
-                throw ASTException("unknown ArgValues setting '${name}'")
+                throw ASTException("unknown JianArgValues setting '${name}'")
             }
             if (settings.contains(name)) {
-                throw ASTException("duplicate ArgValues setting '${name}'")
+                throw ASTException("duplicate JianArgValues setting '${name}'")
             }
             settings.add(name, argument.expr.toTokens())
         }
@@ -54,7 +54,7 @@ func argValues(input: Tokens, header: Tokens, constraint: Tokens, previous: Toke
             let expected = Token(TokenKind.STRING_LITERAL, valueType.toString())
             let accept = settings.get("accept") ?? quote(parseValue<$(valueType)>(raw, $(expected)))
             output = output + quote(
-                $(header) $(valueType) <: ArgValue<$(valueType)> $(constraint) {
+                $(header) $(valueType) <: JianArgValue<$(valueType)> $(constraint) {
                     public static func metavar(): String { $(metavar) }
                     public static func takesValue(): Bool { $(takesValue) }
                     public static func whenAbsent(): ?$(valueType) { $(whenAbsent) }

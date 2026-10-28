@@ -7,54 +7,54 @@ class ArgCursorTest {
     @TestCase[input in [
         (
             ["cjpm", "init", "--name", "jian", "--type=dynamic"],
-            [Arg.Operand("cjpm"), Arg.Operand("init"), Arg.Long("name"), Arg.Operand("jian"), Arg.Long("type", "dynamic")]
+            [JianArg.Operand("cjpm"), JianArg.Operand("init"), JianArg.Long("name"), JianArg.Operand("jian"), JianArg.Long("type", "dynamic")]
         ),
         (
             ["--opt=v", "--opt=", "--opt=a=b", "--имя=да"],
-            [Arg.Long("opt", "v"), Arg.Long("opt", ""), Arg.Long("opt", "a=b"), Arg.Long("имя", "да")]
+            [JianArg.Long("opt", "v"), JianArg.Long("opt", ""), JianArg.Long("opt", "a=b"), JianArg.Long("имя", "да")]
         ),
         (
             ["-n", "3", "-n=3", "-n3", "-n=", "-n", ""],
-            [Arg.Short(b'n', "3"), Arg.Short(b'n', "3"), Arg.Short(b'n', "3"), Arg.Short(b'n', ""), Arg.Short(b'n', "")]
+            [JianArg.Short(b'n', "3"), JianArg.Short(b'n', "3"), JianArg.Short(b'n', "3"), JianArg.Short(b'n', ""), JianArg.Short(b'n', "")]
         ),
         (
             ["-abn3", "-abn", "3", "-nabc"],
             [
-                Arg.Short(b'a'), Arg.Short(b'b'), Arg.Short(b'n', "3"),
-                Arg.Short(b'a'), Arg.Short(b'b'), Arg.Short(b'n', "3"), Arg.Short(b'n', "abc")
+                JianArg.Short(b'a'), JianArg.Short(b'b'), JianArg.Short(b'n', "3"),
+                JianArg.Short(b'a'), JianArg.Short(b'b'), JianArg.Short(b'n', "3"), JianArg.Short(b'n', "abc")
             ]
         ),
         (
             ["-abc", "-a=", "-a=value"],
-            [Arg.Short(b'a'), Arg.Short(b'b'), Arg.Short(b'c'), Arg.Short(b'a', ""), Arg.Short(b'a', "value")]
+            [JianArg.Short(b'a'), JianArg.Short(b'b'), JianArg.Short(b'c'), JianArg.Short(b'a', ""), JianArg.Short(b'a', "value")]
         ),
         (
             ["-n", "--", "-n", "-x", "-n", "--opt=v"],
-            [Arg.Short(b'n', "--"), Arg.Short(b'n', "-x"), Arg.Short(b'n', "--opt=v")]
+            [JianArg.Short(b'n', "--"), JianArg.Short(b'n', "-x"), JianArg.Short(b'n', "--opt=v")]
         ),
         (
             ["-nПривет", "-n=Привет"],
-            [Arg.Short(b'n', "Привет"), Arg.Short(b'n', "Привет")]
+            [JianArg.Short(b'n', "Привет"), JianArg.Short(b'n', "Привет")]
         ),
         (
             ["-", "", "file", "--", "-a", "--x=v", "--", "-"],
             [
-                Arg.Operand("-"), Arg.Operand(""), Arg.Operand("file"), Arg.Operand("-a"),
-                Arg.Operand("--x=v"), Arg.Operand("--"), Arg.Operand("-")
+                JianArg.Operand("-"), JianArg.Operand(""), JianArg.Operand("file"), JianArg.Operand("-a"),
+                JianArg.Operand("--x=v"), JianArg.Operand("--"), JianArg.Operand("-")
             ]
         ),
         (["--"], []),
         ([], [])
     ]]
-    func optionFormsPreserveValuesAndSplitClusters(input: (Array<String>, Array<Arg>)) {
+    func optionFormsPreserveValuesAndSplitClusters(input: (Array<String>, Array<JianArg>)) {
         // arrange
         let (argv, expected) = input
-        let cursor = ArgCursor(argv, shortsTakingValue: [b'n'])
+        let cursor = JianArgCursor(argv, shortsTakingValue: [b'n'])
 
         // act
-        let actual = ArrayList<Arg>()
-        let firstPeek = ArrayList<Arg>()
-        let secondPeek = ArrayList<Arg>()
+        let actual = ArrayList<JianArg>()
+        let firstPeek = ArrayList<JianArg>()
+        let secondPeek = ArrayList<JianArg>()
         let before = ArrayList<Array<String>>()
         let after = ArrayList<Array<String>>()
         while (let Some(arg) <- cursor.peek()) {
@@ -79,7 +79,7 @@ class ArgCursorTest {
     @TestCase[value in ["plain", "", "--", "-x", "--name=value", "-n", "-n=", "-abc"]]
     func longRequiredValueRemainsRawDespiteLookahead(value: String) {
         // arrange
-        let cursor = ArgCursor(["--opt", value, "tail"], shortsTakingValue: [b'n'])
+        let cursor = JianArgCursor(["--opt", value, "tail"], shortsTakingValue: [b'n'])
         let option = cursor.next()
 
         // act
@@ -90,22 +90,22 @@ class ArgCursorTest {
         let tail = cursor.next()
 
         // assert
-        @Expect(option, Some(Arg.Long("opt")))
+        @Expect(option, Some(JianArg.Long("opt")))
         @Expect(before, [value, "tail"])
         @Expect(actual, value)
         @Expect(after, ["tail"])
-        @Expect(tail, Some(Arg.Operand("tail")))
+        @Expect(tail, Some(JianArg.Operand("tail")))
         @Expect(cursor.next(), None)
     }
 
     @TestCase
     func failedLookaheadLeavesARequiredValueAvailableAsRawText() {
         // arrange
-        let cursor = ArgCursor(["--opt", "-n"], shortsTakingValue: [b'n'])
+        let cursor = JianArgCursor(["--opt", "-n"], shortsTakingValue: [b'n'])
         let _ = cursor.next()
 
         // act
-        let error = @AssertThrows[UsageException](cursor.peek())
+        let error = @AssertThrows[JianUsageException](cursor.peek())
         let before = cursor.remaining()
         let value = cursor.nextValue("--opt")
 
@@ -119,13 +119,13 @@ class ArgCursorTest {
     @TestCase[input in [[], ["--"], ["last"], ["--", "last"], ["-a"]]]
     func lastArgumentAndEofHaveStableState(input: Array<String>) {
         // arrange
-        let cursor = ArgCursor(input)
+        let cursor = JianArgCursor(input)
         let expected = if (input.contains("last")) {
-            Some(Arg.Operand("last"))
+            Some(JianArg.Operand("last"))
         } else if (input == ["-a"]) {
-            Some(Arg.Short(b'a'))
+            Some(JianArg.Short(b'a'))
         } else {
-            None<Arg>
+            None<JianArg>
         }
 
         // act
@@ -157,9 +157,9 @@ class ArgCursorTest {
     func clusterLookaheadPreservesTheUnconsumedSuffix(input: (Array<String>, Array<Byte>)) {
         // arrange
         let (argv, names) = input
-        let cursor = ArgCursor(argv, shortsTakingValue: [b'n'])
+        let cursor = JianArgCursor(argv, shortsTakingValue: [b'n'])
         let initial = cursor.remaining()
-        let expectedLast = if (names[2] == b'n') { Arg.Short(b'n', "3") } else { Arg.Short(b'c') }
+        let expectedLast = if (names[2] == b'n') { JianArg.Short(b'n', "3") } else { JianArg.Short(b'c') }
 
         // act
         let first = cursor.next()
@@ -173,9 +173,9 @@ class ArgCursorTest {
 
         // assert
         @Expect(initial, argv)
-        @Expect(first, Some(Arg.Short(names[0])))
+        @Expect(first, Some(JianArg.Short(names[0])))
         @Expect(before, ["-" + argv[0][2..], "tail"])
-        @Expect(firstPeek, Some(Arg.Short(names[1])))
+        @Expect(firstPeek, Some(JianArg.Short(names[1])))
         @Expect(secondPeek, firstPeek)
         @Expect(after, before)
         @Expect(second, firstPeek)
@@ -187,7 +187,7 @@ class ArgCursorTest {
     @TestCase
     func rawValueWithinClusterConsumesReconstructedSuffix() {
         // arrange
-        let cursor = ArgCursor(["-abc", "tail"])
+        let cursor = JianArgCursor(["-abc", "tail"])
         let _ = cursor.next()
         let _ = cursor.peek()
 
@@ -199,7 +199,7 @@ class ArgCursorTest {
         // assert
         @Expect(value, "-bc")
         @Expect(remaining, ["tail"])
-        @Expect(tail, Some(Arg.Operand("tail")))
+        @Expect(tail, Some(JianArg.Operand("tail")))
     }
 
     @TestCase[input in [
@@ -209,21 +209,21 @@ class ArgCursorTest {
     ]]
     func subcommandHandoffPreservesOriginalArguments(input: Array<String>) {
         // arrange
-        let parent = ArgCursor(input)
+        let parent = JianArgCursor(input)
         let command = parent.next()
 
         // act
         let _ = parent.peek()
         let forwarded = parent.remaining()
-        let child = ArgCursor(forwarded)
+        let child = JianArgCursor(forwarded)
         let initial = child.remaining()
-        let parentArgs = ArrayList<Arg>()
-        let childArgs = ArrayList<Arg>()
+        let parentArgs = ArrayList<JianArg>()
+        let childArgs = ArrayList<JianArg>()
         while (let Some(arg) <- parent.next()) { parentArgs.add(arg) }
         while (let Some(arg) <- child.next()) { childArgs.add(arg) }
 
         // assert
-        @Expect(command, Some(Arg.Operand("child")))
+        @Expect(command, Some(JianArg.Operand("child")))
         @Expect(forwarded, input[1..])
         @Expect(initial, forwarded)
         @Expect(childArgs.toArray(), parentArgs.toArray())
@@ -234,17 +234,17 @@ class ArgCursorTest {
     @TestCase
     func subcommandHandoffWithinAClusterPreservesOnlyUnconsumedFlags() {
         // arrange
-        let parent = ArgCursor(["-abn=3", "tail"], shortsTakingValue: [b'n'])
+        let parent = JianArgCursor(["-abn=3", "tail"], shortsTakingValue: [b'n'])
         let _ = parent.next()
         let _ = parent.peek()
 
         // act
-        let child = ArgCursor(parent.remaining(), shortsTakingValue: [b'n'])
-        let args = ArrayList<Arg>()
+        let child = JianArgCursor(parent.remaining(), shortsTakingValue: [b'n'])
+        let args = ArrayList<JianArg>()
         while (let Some(arg) <- child.next()) { args.add(arg) }
 
         // assert
-        @Expect(args.toArray(), [Arg.Short(b'b'), Arg.Short(b'n', "3"), Arg.Operand("tail")])
+        @Expect(args.toArray(), [JianArg.Short(b'b'), JianArg.Short(b'n', "3"), JianArg.Operand("tail")])
         @Expect(parent.remaining(), ["-bn=3", "tail"])
         @Expect(child.remaining(), [])
     }
@@ -252,7 +252,7 @@ class ArgCursorTest {
     @TestCase
     func endOfOptionsPersistsWhileAllFollowingArgumentsAreConsumed() {
         // arrange
-        let cursor = ArgCursor(["--", "-a", "--", "-n"])
+        let cursor = JianArgCursor(["--", "-a", "--", "-n"])
 
         // act
         let lookahead = cursor.peek()
@@ -263,11 +263,11 @@ class ArgCursorTest {
         let value = cursor.nextValue("VALUE")
 
         // assert
-        @Expect(lookahead, Some(Arg.Operand("-a")))
+        @Expect(lookahead, Some(JianArg.Operand("-a")))
         @Expect(before, ["--", "-a", "--", "-n"])
         @Expect(first, lookahead)
         @Expect(after, ["--", "-n"])
-        @Expect(second, Some(Arg.Operand("--")))
+        @Expect(second, Some(JianArg.Operand("--")))
         @Expect(value, "-n")
         @Expect(cursor.next(), None)
     }
@@ -275,7 +275,7 @@ class ArgCursorTest {
     @TestCase[input in [["-n"], ["-abn"]]]
     func missingShortValueThrowsWithoutConsumingInput(input: Array<String>) {
         // arrange
-        let cursor = ArgCursor(input, shortsTakingValue: [b'n'])
+        let cursor = JianArgCursor(input, shortsTakingValue: [b'n'])
         if (input[0] == "-abn") {
             let _ = cursor.next()
             let _ = cursor.next()
@@ -283,10 +283,10 @@ class ArgCursorTest {
         let before = cursor.remaining()
 
         // act
-        let firstPeek = @AssertThrows[UsageException](cursor.peek())
-        let secondPeek = @AssertThrows[UsageException](cursor.peek())
-        let firstNext = @AssertThrows[UsageException](cursor.next())
-        let secondNext = @AssertThrows[UsageException](cursor.next())
+        let firstPeek = @AssertThrows[JianUsageException](cursor.peek())
+        let secondPeek = @AssertThrows[JianUsageException](cursor.peek())
+        let firstNext = @AssertThrows[JianUsageException](cursor.next())
+        let secondNext = @AssertThrows[JianUsageException](cursor.next())
 
         // assert
         @Expect(firstPeek.message, "missing argument '-n'")
@@ -299,15 +299,15 @@ class ArgCursorTest {
     @TestCase[input in ["-é", "-aé"]]
     func nonAsciiShortNamesThrowUsageExceptionWithoutSplittingUtf8(input: String) {
         // arrange
-        let cursor = ArgCursor([input])
+        let cursor = JianArgCursor([input])
         if (input == "-aé") {
             let _ = cursor.next()
         }
         let before = cursor.remaining()
 
         // act
-        let peekError = @AssertThrows[UsageException](cursor.peek())
-        let nextError = @AssertThrows[UsageException](cursor.next())
+        let peekError = @AssertThrows[JianUsageException](cursor.peek())
+        let nextError = @AssertThrows[JianUsageException](cursor.next())
 
         // assert
         @Expect(peekError.message, "unknown option '-é'")
@@ -318,12 +318,12 @@ class ArgCursorTest {
     @TestCase
     func missingLongValueThrowsUsageExceptionAtStableEof() {
         // arrange
-        let cursor = ArgCursor(["--opt"])
+        let cursor = JianArgCursor(["--opt"])
         let _ = cursor.next()
 
         // act
-        let first = @AssertThrows[UsageException](cursor.nextValue("--opt"))
-        let second = @AssertThrows[UsageException](cursor.nextValue("--opt"))
+        let first = @AssertThrows[JianUsageException](cursor.nextValue("--opt"))
+        let second = @AssertThrows[JianUsageException](cursor.nextValue("--opt"))
 
         // assert
         @Expect(first.message, "missing argument '--opt'")

@@ -1,7 +1,7 @@
-// expect-error: parameter name '--help' is reserved
+// expect-error: option name '--help' is reserved
 package fixture
 
 import jian.*
 
-@Command
+@JianCommand
 func example(help!: Bool): Unit {}
