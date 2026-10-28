@@ -1,7 +1,7 @@
-// expect-error: @Callback does not take generic functions
+// expect-error: @JianCallback does not take generic functions
 package fixture
 
 import jian.*
 
-@Callback
+@JianCallback
 func example<T>(value: T): Unit {}

@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@Callback
-func example(@Param[short: 'v'] verbose!: Bool, @Param[short: 'v'] version!: Bool) {}
+@JianCallback
+func example(verbose!: Bool = JianOption(short: 'v'), version!: Bool = JianOption(short: 'v')) {}

@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@Callback
-func example(@Param[short: 'я'] value!: Bool) {}
+@JianCallback
+func example(value!: Bool = JianOption(short: 'я')) {}

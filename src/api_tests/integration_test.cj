@@ -7,33 +7,33 @@ import std.unittest.testmacro.*
 
 private var integrationEvents = ""
 
-@Callback[help: "Workspace options"]
-func integrationGlobal(@Param[short: 'v', help: "Verbose workspace"] verbose!: Bool,
-    @Param[short: 'j'] jobs!: Int64 = 1,
-    @Param[short: 'p', hidden: true] paths!: Array<String>): Unit {
+@JianCallback[help: "Workspace options"]
+func integrationGlobal(verbose!: Bool = JianOption(short: 'v', help: "Verbose workspace", default: false),
+    jobs!: Int64 = JianOption(short: 'j', default: 1),
+    paths!: Array<String> = JianOption(short: 'p', hidden: true, default: [])): Unit {
     integrationEvents += "global:${verbose}:${jobs}:${paths};"
 }
 
-@Command[help: "Process input paths"]
-func integrationFiles(@Param[help: "Input paths"] paths: Array<String>,
-    @Param[short: 'v'] verbose!: Bool, @Param[short: 't'] times!: Int64 = 1): Int64 {
+@JianCommand[help: "Process input paths"]
+func integrationFiles(paths!: Array<String> = JianArgument(help: "Input paths", default: []),
+    verbose!: Bool = JianOption(short: 'v', default: false), times!: Int64 = JianOption(short: 't', default: 1)): Int64 {
     integrationEvents += "files:${paths}:${verbose}:${times};"
     paths.size * times
 }
 
-@Callback
-func integrationArguments(@Param[help: "Arguments"] values: Array<String>): Unit {
+@JianCallback
+func integrationArguments(values!: Array<String> = JianArgument(help: "Arguments", default: [])): Unit {
     integrationEvents = values.toString()
 }
 
 @Test
 class MacroIntegrationTest {
     @TestCase
-    func short_tables_switch_at_command_boundary_and_variadic_operands_accumulate() {
+    func shortTablesSwitchAtCommandBoundaryAndVariadicOperandsAccumulate() {
         // arrange
         integrationEvents = ""
         let errors = ByteBuffer()
-        let app = App(name: "test", stderr: errors)
+        let app = JianApp(name: "test", stderr: errors)
             .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
 
         // act
@@ -43,17 +43,17 @@ class MacroIntegrationTest {
         @Expect(code, 4)
         @Expect(integrationEvents, "global:true:3:[a, b];files:[first, second]:true:2;")
         @Expect(errors.bytes().size, 0)
-        @Expect(IntegrationGlobalCallback().spec.params[0].short, Some(b'v'))
-        @Expect(IntegrationGlobalCallback().spec.params[0].help, "Verbose workspace")
-        @Expect(IntegrationGlobalCallback().spec.params[2].hidden, true)
-        @Expect(IntegrationFilesCommand().spec.params[0].repeatable, true)
-        @Expect(IntegrationFilesCommand().spec.params[0].help, "Input paths")
+        @Expect(IntegrationGlobalCallback().spec.inputs[0].short, Some(b'v'))
+        @Expect(IntegrationGlobalCallback().spec.inputs[0].help, "Verbose workspace")
+        @Expect(IntegrationGlobalCallback().spec.inputs[2].hidden, true)
+        @Expect(IntegrationFilesCommand().spec.inputs[0].repeatable, true)
+        @Expect(IntegrationFilesCommand().spec.inputs[0].help, "Input paths")
     }
 
     @TestCase
-    func callback_variadic_collects_all_operands_when_used_without_subcommands() {
+    func callbackVariadicCollectsAllOperandsWhenUsedWithoutSubcommands() {
         // arrange
-        let app = App(name: "test").callback(IntegrationArgumentsCallback())
+        let app = JianApp(name: "test").callback(IntegrationArgumentsCallback())
 
         // act
         let code = app.run(["first", "second", "--", "-third"])
@@ -64,10 +64,10 @@ class MacroIntegrationTest {
     }
 
     @TestCase
-    func callback_short_value_can_equal_a_subcommand_name() {
+    func callbackShortValueCanEqualASubcommandName() {
         // arrange
         integrationEvents = ""
-        let app = App(name: "test").callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+        let app = JianApp(name: "test").callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
 
         // act
         let code = app.run(["-p", "integration-files", "integration-files", "input"])
@@ -78,12 +78,12 @@ class MacroIntegrationTest {
     }
 
     @TestCase
-    func app_help_uses_callback_param_metadata_after_short_clusters_without_invocation() {
+    func appHelpUsesCallbackParamMetadataAfterShortClustersWithoutInvocation() {
         // arrange
         integrationEvents = ""
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = App(name: "test", stdout: output, stderr: errors)
+        let app = JianApp(name: "test", stdout: output, stderr: errors)
             .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
 
         // act
@@ -102,12 +102,12 @@ class MacroIntegrationTest {
     }
 
     @TestCase
-    func command_help_describes_variadic_operands_after_short_options() {
+    func commandHelpDescribesVariadicOperandsAfterShortOptions() {
         // arrange
         integrationEvents = ""
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = App(name: "test", stdout: output, stderr: errors)
+        let app = JianApp(name: "test", stdout: output, stderr: errors)
             .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
 
         // act
@@ -124,12 +124,12 @@ class MacroIntegrationTest {
     }
 
     @TestCase
-    func help_like_values_and_variadic_operands_after_marker_reach_the_functions() {
+    func helpLikeValuesAndVariadicOperandsAfterMarkerReachTheFunctions() {
         // arrange
         integrationEvents = ""
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = App(name: "test", stdout: output, stderr: errors)
+        let app = JianApp(name: "test", stdout: output, stderr: errors)
             .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
 
         // act
@@ -141,5 +141,4 @@ class MacroIntegrationTest {
         @Expect(output.bytes().isEmpty(), true)
         @Expect(errors.bytes().isEmpty(), true)
     }
-
 }

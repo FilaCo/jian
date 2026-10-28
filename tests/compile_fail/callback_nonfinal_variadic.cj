@@ -1,7 +1,7 @@
-// expect-error: variadic Array parameter must be the last positional parameter
+// expect-error: variadic Array argument must be the last positional argument
 package fixture
 
 import jian.*
 
-@Callback
+@JianCallback
 func example(files: Array<String>, destination: String): Unit {}

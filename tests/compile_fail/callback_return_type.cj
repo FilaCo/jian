@@ -1,7 +1,7 @@
-// expect-error: @Callback return type must be Unit or Int64
+// expect-error: @JianCallback return type must be Unit or Int64
 package fixture
 
 import jian.*
 
-@Callback
+@JianCallback
 func example(): String { "bad" }
