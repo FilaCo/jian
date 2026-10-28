@@ -68,25 +68,26 @@ object identity; other values follow Cangjie's normal value semantics.
 
 ```cangjie
 let context = AppContext(logger)
-let people = JianContextApp<AppContext>(name: "people").add(GreetCommand())
-let app = JianContextApp<AppContext>(name: "demo")
+let people = JianApp<AppContext>(name: "people").add(GreetCommand())
+let app = JianApp<AppContext>(name: "demo")
     .callback(ConfigureCallback())
     .add(people)
 
 app.run(["--verbose", "people", "greet", "Alice"], context: context)
 ```
 
-`JianContextApp<C>` accepts generated `JianContextCommand<C>` and
+`JianApp<C>` accepts generated `JianContextCommand<C>` and
 `JianContextCallback<C>` adapters, as well as ordinary `JianCommand` and
 `JianCallback` implementations that ignore the context. A hand-written context
 adapter exposes the usual `spec` (and command `name`) and implements
 `run(args: JianArgCursor, context: C): Int64`.
 
-Every sub-app must be a `JianContextApp<C>` with the same context type, even if
+Every sub-app must be a `JianApp<C>` with the same context type, even if
 none of its functions requests a dependency. It receives the context supplied to
 the root run, full command path and root output streams. Sub-apps cannot introduce
-or replace a context. Ordinary `JianApp` trees keep their existing API and cannot
-register context-requiring adapters. A mismatched command, callback or sub-app,
+or replace a context. Apps without injection use `JianApp<Unit>` and can call
+`run(argv)` without supplying context. They cannot register adapters requiring
+another context type. A mismatched command, callback or sub-app,
 a missing dependency implementation, and a `run` call without context fail to
 compile. Multiple context types in one tree are not supported in this version.
 
@@ -105,7 +106,11 @@ not rolled back. A callback-only app can configure context without a command.
 Help skips the callback or command whose help is requested; ancestor callbacks
 may already have run. No dependencies are extracted for the skipped target.
 Help returns 0. Usage errors return 2 with usage on stderr. Other exceptions
-propagate, with the same behavior as `JianApp`.
+propagate for both context-bearing and context-free apps.
+
+Existing context-free applications migrate from `JianApp(name: ...)` to
+`JianApp<Unit>(name: ...)`; their `run(argv)` calls stay the same. Applications
+with context use `JianApp<C>(name: ...)` and `run(argv, context: value)`.
 
 ## Generated extraction contract
 

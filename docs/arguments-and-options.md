@@ -21,7 +21,7 @@ func greet(
 }
 ```
 
-The CLI accepts `greet Alice -vt3`. Register `GreetCommand()` with `JianApp`.
+The CLI accepts `greet Alice -vt3`. Register `GreetCommand()` with `JianApp<Unit>`.
 The same declarations work under `@JianCallback` for app-level arguments and options.
 
 Cangjie requires `!` on any function parameter with a default expression.

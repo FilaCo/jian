@@ -16,8 +16,8 @@ func greet(name: String, logger!: Logger = JianFromContext<Context>()): Unit {
 
 main(args: Array<String>): Int64 {
     let context = Context()
-    JianContextApp<Context>(name: "demo")
+    JianApp<Context>(name: "demo")
         .callback(ConfigureCallback())
-        .add(JianContextApp<Context>(name: "people").add(GreetCommand()))
+        .add(JianApp<Context>(name: "people").add(GreetCommand()))
         .run(args, context: context)
 }

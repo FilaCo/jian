@@ -13,9 +13,9 @@ func deploy(target: String): Unit {
 }
 
 main(args: Array<String>): Int64 {
-    let project = JianApp(name: "project", help: "Project commands.")
+    let project = JianApp<Unit>(name: "project", help: "Project commands.")
         .add(DeployCommand())
-    JianApp(name: "demo", help: "A CLI with a nested app.")
+    JianApp<Unit>(name: "demo", help: "A CLI with a nested app.")
         .callback(ConfigureCallback())
         .add(project)
         .run(args)

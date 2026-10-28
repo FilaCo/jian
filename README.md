@@ -49,7 +49,7 @@ func greet(
 }
 
 main(args: Array<String>): Int64 {
-    JianApp(name: "demo", help: "A first jian CLI.")
+    JianApp<Unit>(name: "demo", help: "A first jian CLI.")
         .add(GreetCommand())
         .run(args)
 }
@@ -69,7 +69,7 @@ cjpm run -- greet --help
 
 The macro preserves `greet` as a callable function and generates `GreetCommand()`
 for registration. The command name is `greet`; camelCase and snake_case CLI names
-become kebab-case. Registration is explicit. `JianApp.run` takes arguments
+become kebab-case. Registration is explicit. `JianApp<Unit>.run` takes arguments
 excluding the executable name, which is exactly what `main(args)` receives.
 
 ## Parameters become arguments and options
@@ -114,7 +114,7 @@ for optional aliases, direct calls and marker constraints.
 ## Apps, sub-apps and callbacks
 
 Register generated command adapters with `.add(GreetCommand())`. Register a
-nested `JianApp` the same way. A function marked `@JianCallback` generates a
+nested `JianApp<Unit>` the same way. A function marked `@JianCallback` generates a
 `ConfigureCallback` adapter from `configure`; set it with
 `.callback(ConfigureCallback())` to parse app-level arguments and options before
 dispatching to a command.
@@ -160,7 +160,7 @@ func greet(name: String, logger!: Logger = JianFromContext<AppContext>()): Unit 
 
 // Create the context outside commands and callbacks; supply it on every run.
 let context = AppContext()
-let app = JianContextApp<AppContext>(name: "demo")
+let app = JianApp<AppContext>(name: "demo")
     .callback(ConfigureCallback())
     .add(GreetCommand())
 app.run(["--verbose", "greet", "Alice"], context: context)
@@ -215,8 +215,9 @@ help for a nested target.
 | `JianUsageException` | Print error and usage to stderr, return `2` |
 | Other exception | Propagate to the caller |
 
-Return `JianApp.run(args)` from `main` to preserve these codes. The library never
-calls `exit()`. `JianApp` accepts `stdout` and `stderr` streams for testing.
+Return `app.run(args)` from `main` to preserve these codes for a `JianApp<Unit>`.
+Apps with context use `app.run(args, context: ctx)`. The library never calls
+`exit()`. `JianApp<C>` accepts `stdout` and `stderr` streams for testing.
 
 ## Examples and checks
 

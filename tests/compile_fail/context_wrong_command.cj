@@ -8,4 +8,4 @@ class ContextA { public let text: String = "a" }
 class ContextB { public let text: String = "b" }
 @JianCommand
 func bad(text!: String = JianFromContext<ContextB>()): Unit {}
-func register(): Unit { JianContextApp<ContextA>(name: "demo").add(BadCommand()) }
+func register(): Unit { JianApp<ContextA>(name: "demo").add(BadCommand()) }
