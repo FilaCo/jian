@@ -2,10 +2,10 @@ package jian.runtime
 
 /**
  * A conversion failure without a parameter name.
- * The command parser adds that context with UsageException.invalidValue.
+ * The command parser adds that context with JianUsageException.invalidValue.
  */
-public class InvalidValueException <: Exception {
-    public InvalidValueException(
+public class JianInvalidValueException <: Exception {
+    public JianInvalidValueException(
         /**
          * The input exactly as supplied.
          */
@@ -19,6 +19,6 @@ public class InvalidValueException <: Exception {
     }
 
     protected override func getClassName(): String {
-        "InvalidValueException"
+        "JianInvalidValueException"
     }
 }

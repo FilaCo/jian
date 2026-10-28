@@ -5,8 +5,8 @@ import std.deriving.*
 /**
  * Command or callback metadata used to render help and usage.
  */
-public struct CommandSpec {
-    public CommandSpec(
+public struct JianCommandSpec {
+    public JianCommandSpec(
         /**
          * The text under the usage line; empty for none.
          */
@@ -14,7 +14,7 @@ public struct CommandSpec {
         /**
          * The parameters, in declaration order.
          */
-        public let params!: Array<ParamSpec> = []
+        public let params!: Array<JianParamSpec> = []
     ) {}
 }
 
@@ -22,7 +22,7 @@ public struct CommandSpec {
  * How a parameter appears on the command line.
  */
 @Derive[Equatable, ToString]
-public enum ParamKind {
+public enum JianParamKind {
     /**
      * `NAME`, by position.
      */
@@ -40,13 +40,13 @@ public enum ParamKind {
 /**
  * Parameter metadata used to render help and usage.
  */
-public struct ParamSpec {
-    public ParamSpec(
+public struct JianParamSpec {
+    public JianParamSpec(
         /**
          * The CLI name in kebab case without dashes, e.g. `dry-run`.
          */
         public let name: String,
-        public let kind!: ParamKind,
+        public let kind!: JianParamKind,
         /**
          * The placeholder for the value, e.g. `INT` or `INT...`; empty for a flag.
          */

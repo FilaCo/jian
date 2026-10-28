@@ -1,7 +1,7 @@
-// expect-error: @Command return type must be Unit or Int64
+// expect-error: @JianCommand return type must be Unit or Int64
 package fixture
 
 import jian.*
 
-@Command
+@JianCommand
 func example(): String { "bad" }

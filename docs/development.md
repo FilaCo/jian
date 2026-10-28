@@ -45,7 +45,7 @@ such as `cjpm build --target-dir target/build-fresh`.
 
 Build a package that imports `jian.*` and uses the changed macro. Building the
 macro package alone cannot validate its expansion, unqualified generated names
-or the runtime re-export. Check that a hand-written `Command` can implement the
+or the runtime re-export. Check that a hand-written `JianCommand` can implement the
 runtime contract from a consumer package as well.
 
 `bash tests/check_compile_fail.sh` builds the library, then compiles each

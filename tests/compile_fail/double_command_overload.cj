@@ -3,7 +3,7 @@ package fixture
 
 import jian.*
 
-@Command
+@JianCommand
 func example(value: String): Unit {}
-@Command
+@JianCommand
 func example(value: Int64): Unit {}

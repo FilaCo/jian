@@ -1,7 +1,7 @@
-// expect-error: Option settings must be named
+// expect-error: JianOption settings must be named
 package fixture
 
 import jian.*
 
-@Command
-func example(value!: Bool = Option('v')) {}
+@JianCommand
+func example(value!: Bool = JianOption('v')) {}

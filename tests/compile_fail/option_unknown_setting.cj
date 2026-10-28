@@ -1,7 +1,7 @@
-// expect-error: unknown Option setting 'other'
+// expect-error: unknown JianOption setting 'other'
 package fixture
 
 import jian.*
 
-@Command
-func example(value!: Bool = Option(other: true)) {}
+@JianCommand
+func example(value!: Bool = JianOption(other: true)) {}

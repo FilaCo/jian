@@ -1,7 +1,7 @@
-// expect-error: @Command does not take generic functions
+// expect-error: @JianCommand does not take generic functions
 package fixture
 
 import jian.*
 
-@Command
+@JianCommand
 func example<T>(value: T): Unit {}

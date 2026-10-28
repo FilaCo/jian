@@ -1,9 +1,9 @@
 package jian.runtime
 
-import jian.runtime.macros.ArgValues
+import jian.runtime.macros.JianArgValues
 import std.fs.Path
 
-@ArgValues(
+@JianArgValues(
     value<String>(metavar: "TEXT", accept: requiredValue(raw)),
     // Paths remain textual without checking the filesystem.
     value<Path>(metavar: "PATH", accept: Path(requiredValue(raw))),
@@ -13,7 +13,7 @@ import std.fs.Path
     )
 )
 
-@ArgValues[T](
+@JianArgValues[T](
     value<Option<T>>(
         metavar: T.metavar(),
         takesValue: T.takesValue(),

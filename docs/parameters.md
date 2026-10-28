@@ -4,28 +4,34 @@ A command is a function. Without extra settings, its positional parameters
 become CLI arguments, and its named parameters (`!`) become long options.
 Names use kebab case: `dryRun!` becomes `--dry-run`.
 
-Use `Argument(...)` and `Option(...)` in parameter defaults to add CLI settings:
+Framework types and macros use the `Jian` prefix (`JianApp`, `JianCommand`,
+`JianCallback`, `JianArgValue`, `JianArgCursor`, `JianParamSpec`). Public helper
+functions use camelCase with a `jian` prefix, such as `jianAcceptAs`.
+Generated adapters keep names derived from your functions: `greet` generates
+`GreetCommand`, and a callback `configure` generates `ConfigureCallback`.
+
+Use `JianArgument(...)` and `JianOption(...)` in parameter defaults to add CLI settings:
 
 ```cangjie
 import jian.*
 
-@Command[help: "Greet someone"]
+@JianCommand[help: "Greet someone"]
 func greet(
-    name!: String = Argument(help: "Name to greet"),
-    times!: Int64 = Option(short: 't', help: "Repetitions", default: 1),
-    verbose!: Bool = Option(short: 'v', default: false)
+    name!: String = JianArgument(help: "Name to greet"),
+    times!: Int64 = JianOption(short: 't', help: "Repetitions", default: 1),
+    verbose!: Bool = JianOption(short: 'v', default: false)
 ): Unit {
     for (_ in 0..times) { println(name) }
     if (verbose) { println("Done") }
 }
 ```
 
-The CLI accepts `greet Alice -vt3`. Register `GreetCommand()` with `App`.
-The same declarations work under `@Callback` for app-level parameters.
+The CLI accepts `greet Alice -vt3`. Register `GreetCommand()` with `JianApp`.
+The same declarations work under `@JianCallback` for app-level parameters.
 
 Cangjie requires `!` on any function parameter with a default expression.
 Therefore `name!` above is still a named parameter in direct function calls,
-but `Argument(...)` makes it positional in the CLI. `Option(...)` declares an
+but `JianArgument(...)` makes it positional in the CLI. `JianOption(...)` declares an
 option. Bare positional parameters such as `name: String` need no marker.
 
 ## Defaults and required values
@@ -60,7 +66,7 @@ records the default expression without the marker wrapper.
 ## Settings
 
 Both markers accept named `help: String`, `hidden: Bool`, and `default` of the
-declared parameter type. `Option` also accepts `short: Rune`: a single ASCII
+declared parameter type. `JianOption` also accepts `short: Rune`: a single ASCII
 character literal such as `'v'`. Short names are unique within a command or
 callback, and `'h'` is reserved. Short flags can be clustered, and a value-taking
 option accepts attached or separate values (`-t3`, `-t=3`, `-t 3`).
@@ -68,13 +74,10 @@ option accepts attached or separate values (`-t3`, `-t=3`, `-t 3`).
 `hidden: true` hides a parameter from help metadata consumers; parsing still
 accepts it. Omitted settings mean empty help, visible, and no short alias.
 Unknown or repeated settings, invalid short names, and mistyped defaults or
-metadata fail compilation. `Argument` does not accept `short`. A variadic
+metadata fail compilation. `JianArgument` does not accept `short`. A variadic
 `Array<T>` argument must be the final positional argument.
 
-Markers are recognized as unqualified `Option(...)` or `Argument(...)` calls
+Markers are recognized as unqualified `JianOption(...)` or `JianArgument(...)` calls
 in parameter defaults; their type comes from the parameter declaration.
 Runtime marker functions throw `IllegalArgumentException` if evaluated elsewhere.
-`Option` shares its name with `std.core.Option`; outside marker declarations,
-use an explicit import or alias to disambiguate value expressions, for example
-`import std.core.Option as Optional` for `Optional<Int64>.whenAbsent()`.
-The optional type spelling `?T` needs no alias.
+The standard `Option<T>` type remains available without aliases.

@@ -1,7 +1,7 @@
-// expect-error: unknown Argument setting 'short'
+// expect-error: unknown JianArgument setting 'short'
 package fixture
 
 import jian.*
 
-@Command
-func example(value!: String = Argument(short: 'v')) {}
+@JianCommand
+func example(value!: String = JianArgument(short: 'v')) {}

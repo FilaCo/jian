@@ -14,70 +14,70 @@ private func dynamicDefault(): String {
     "default"
 }
 
-@Command[help: "A greeting"]
+@JianCommand[help: "A greeting"]
 func greet_user(name: String, times!: Int64 = 2): Int64 {
     observed = name
     times
 }
 
-@Command
+@JianCommand
 func dependent(first: String, second!: String = privatePrefix + first): Unit {
     observed = second
 }
 
-@Command
+@JianCommand
 func implicit(loud!: Bool = false, jobs!: ?Int64): Unit {
     observed = "${loud}:${jobs ?? -1}"
 }
 
-@Command
+@JianCommand
 func collect(paths!: Array<String> = []): Int64 {
     observed = paths.toString()
     paths.size
 }
 
-@Command
+@JianCommand
 func lazy(value!: String = dynamicDefault()) {
     observed = value
 }
 
-@Command
+@JianCommand
 func `quoted_name`(): Int64 { 7 }
 
-@Command
+@JianCommand
 func inferred() { 9 }
 
-@Command
+@JianCommand
 func textDefault(value!: String = "hello"): Int64 { value.size }
 
-@Command
+@JianCommand
 func requiredNumber(value!: Int64): Int64 { value }
 
 type Switch = Bool
 type MaybeJobs = ?Int64
 
-@Command
+@JianCommand
 func aliases(enabled!: Switch = false, jobs!: MaybeJobs): Int64 {
     if (enabled) { jobs ?? 0 } else { -1 }
 }
 
-@Command
+@JianCommand
 func camelCase(): Int64 { 8 }
 
-@Command
-func copyFiles(destination: String, files!: Array<Path> = Argument(default: []), verbose!: Bool = false): Int64 {
+@JianCommand
+func copyFiles(destination: String, files!: Array<Path> = JianArgument(default: []), verbose!: Bool = false): Int64 {
     observed = "${destination}:${files}:${verbose}"
     files.size
 }
 
-@Command
-func sumValues(values!: Array<Int64> = Argument(default: [])): Int64 {
+@JianCommand
+func sumValues(values!: Array<Int64> = JianArgument(default: [])): Int64 {
     var total: Int64 = 0
     for (value in values) { total += value }
     total
 }
 
-@Command
+@JianCommand
 func overloaded(value: String): Int64 { value.size }
 
 func overloaded(value: Int64): Int64 { value }
@@ -90,7 +90,7 @@ class CommandMacroTest {
         let command = CopyFilesCommand()
 
         // act
-        let code = command.run(ArgCursor(["out", "first", "--verbose", "second", "--", "--third"]))
+        let code = command.run(JianArgCursor(["out", "first", "--verbose", "second", "--", "--third"]))
 
         // assert
         @Expect(code, 3)
@@ -98,7 +98,7 @@ class CommandMacroTest {
         @Expect(command.spec.params[1].repeatable, true)
         @Expect(command.spec.params[1].required, false)
         @Expect(command.spec.params[1].metavar, "PATH...")
-        @Expect(command.run(ArgCursor(["out"])), 0)
+        @Expect(command.run(JianArgCursor(["out"])), 0)
         @Expect(observed, "out:[]:false")
     }
 
@@ -108,14 +108,14 @@ class CommandMacroTest {
         let command = SumValuesCommand()
 
         // act
-        let total = command.run(ArgCursor(["1", "2", "3"]))
-        let invalid = @AssertThrows[UsageException](command.run(ArgCursor(["1", "bad"])))
+        let total = command.run(JianArgCursor(["1", "2", "3"]))
+        let invalid = @AssertThrows[JianUsageException](command.run(JianArgCursor(["1", "bad"])))
 
         // assert
         @Expect(total, 6)
-        @Expect(command.run(ArgCursor([])), 0)
+        @Expect(command.run(JianArgCursor([])), 0)
         @Expect(invalid.message, "invalid value 'bad' for 'VALUES': expected Int64")
-        @Expect(OverloadedCommand().run(ArgCursor(["hello"])), 5)
+        @Expect(OverloadedCommand().run(JianArgCursor(["hello"])), 5)
     }
 
     @TestCase
@@ -124,19 +124,19 @@ class CommandMacroTest {
         let command = Greet_userCommand()
 
         // act
-        let code = command.run(ArgCursor(["Alice", "--times=4"]))
+        let code = command.run(JianArgCursor(["Alice", "--times=4"]))
 
         // assert
         @Expect(code, 4)
         @Expect(observed, "Alice")
         @Expect(command.name, "greet-user")
         @Expect(command.spec.help, "A greeting")
-        @Expect(command.spec.params[0].kind, ParamKind.Positional)
+        @Expect(command.spec.params[0].kind, JianParamKind.Positional)
         @Expect(command.spec.params[0].metavar, "TEXT")
         @Expect(command.spec.params[0].required, true)
         @Expect(command.spec.params[1].defaultShown, Some("2"))
         @Expect(command.spec.params[1].required, false)
-        @Expect(command.run(ArgCursor(["Bob"])), 2)
+        @Expect(command.run(JianArgCursor(["Bob"])), 2)
     }
 
     @TestCase
@@ -145,12 +145,12 @@ class CommandMacroTest {
         let command = DependentCommand()
 
         // act
-        let code = command.run(ArgCursor(["name"]))
+        let code = command.run(JianArgCursor(["name"]))
 
         // assert
         @Expect(code, 0)
         @Expect(observed, "private:name")
-        command.run(ArgCursor(["name", "--second=explicit"]))
+        command.run(JianArgCursor(["name", "--second=explicit"]))
         @Expect(observed, "explicit")
     }
 
@@ -160,15 +160,15 @@ class CommandMacroTest {
         let command = ImplicitCommand()
 
         // act
-        command.run(ArgCursor([]))
+        command.run(JianArgCursor([]))
 
         // assert
         @Expect(observed, "false:-1")
-        @Expect(command.spec.params[0].kind, ParamKind.Flag)
+        @Expect(command.spec.params[0].kind, JianParamKind.Flag)
         @Expect(command.spec.params[0].required, false)
         @Expect(command.spec.params[1].metavar, "INT")
         @Expect(command.spec.params[1].required, false)
-        command.run(ArgCursor(["--loud", "--jobs", "3"]))
+        command.run(JianArgCursor(["--loud", "--jobs", "3"]))
         @Expect(observed, "true:3")
     }
 
@@ -178,14 +178,14 @@ class CommandMacroTest {
         let command = CollectCommand()
 
         // act
-        let code = command.run(ArgCursor(["--paths", "a", "--paths=b"]))
+        let code = command.run(JianArgCursor(["--paths", "a", "--paths=b"]))
 
         // assert
         @Expect(code, 2)
         @Expect(observed, "[a, b]")
         @Expect(command.spec.params[0].repeatable, true)
         @Expect(command.spec.params[0].metavar, "TEXT...")
-        @Expect(command.run(ArgCursor([])), 0)
+        @Expect(command.run(JianArgCursor([])), 0)
     }
 
     @TestCase
@@ -196,13 +196,13 @@ class CommandMacroTest {
 
         // act
         let metadata = command.spec
-        let explicitCode = command.run(ArgCursor(["--value=given"]))
+        let explicitCode = command.run(JianArgCursor(["--value=given"]))
 
         // assert
         @Expect((metadata.params[0].defaultShown ?? "").replace(" ", ""), "dynamicDefault()")
         @Expect(defaultCalls, 0)
         @Expect(explicitCode, 0)
-        command.run(ArgCursor([]))
+        command.run(JianArgCursor([]))
         @Expect(defaultCalls, 1)
         @Expect(observed, "default")
     }
@@ -214,13 +214,13 @@ class CommandMacroTest {
         let camel = CamelCaseCommand()
 
         // act
-        let code = quoted.run(ArgCursor([]))
+        let code = quoted.run(JianArgCursor([]))
 
         // assert
         @Expect(code, 7)
         @Expect(quoted.name, "quoted-name")
         @Expect(camel.name, "camel-case")
-        @Expect(camel.run(ArgCursor([])), 8)
+        @Expect(camel.run(JianArgCursor([])), 8)
     }
 
     @TestCase
@@ -229,14 +229,14 @@ class CommandMacroTest {
         let command = AliasesCommand()
 
         // act
-        let code = command.run(ArgCursor(["--enabled", "--jobs=6"]))
+        let code = command.run(JianArgCursor(["--enabled", "--jobs=6"]))
 
         // assert
         @Expect(code, 6)
-        @Expect(command.run(ArgCursor([])), -1)
-        @Expect(command.spec.params[0].kind, ParamKind.Flag)
-        @Expect(InferredCommand().run(ArgCursor([])), 9)
-        @Expect(TextDefaultCommand().run(ArgCursor([])), 5)
+        @Expect(command.run(JianArgCursor([])), -1)
+        @Expect(command.spec.params[0].kind, JianParamKind.Flag)
+        @Expect(InferredCommand().run(JianArgCursor([])), 9)
+        @Expect(TextDefaultCommand().run(JianArgCursor([])), 5)
         @Expect(TextDefaultCommand().spec.params[0].defaultShown, Some("\"hello\""))
     }
 
@@ -246,12 +246,12 @@ class CommandMacroTest {
         let command = Greet_userCommand()
 
         // act
-        let missing = @AssertThrows[UsageException](command.run(ArgCursor([])))
-        let invalid = @AssertThrows[UsageException](command.run(ArgCursor(["Alice", "--times=bad"])))
-        let unknown = @AssertThrows[UsageException](command.run(ArgCursor(["Alice", "--other"])))
-        let missingValue = @AssertThrows[UsageException](command.run(ArgCursor(["Alice", "--times"])))
-        let namedMissing = @AssertThrows[UsageException](RequiredNumberCommand().run(ArgCursor([])))
-        let surplus = @AssertThrows[UsageException](command.run(ArgCursor(["Alice", "Bob"])))
+        let missing = @AssertThrows[JianUsageException](command.run(JianArgCursor([])))
+        let invalid = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "--times=bad"])))
+        let unknown = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "--other"])))
+        let missingValue = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "--times"])))
+        let namedMissing = @AssertThrows[JianUsageException](RequiredNumberCommand().run(JianArgCursor([])))
+        let surplus = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "Bob"])))
 
         // assert
         @Expect(missing.message, "missing argument 'NAME'")

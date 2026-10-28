@@ -9,12 +9,12 @@ import std.io.OutputStream
  * `stderr` receives usage errors and is never closed by the app.
  * During run, nested apps use this app's stream and report the full command path.
  */
-public class App {
-    private let commands = ArrayList<Command>()
-    private let apps = ArrayList<App>()
-    private var appCallback: ?Callback = None
+public class JianApp {
+    private let commands = ArrayList<JianCommand>()
+    private let apps = ArrayList<JianApp>()
+    private var appCallback: ?JianCallback = None
 
-    public App(public let name!: String, public let help!: String = "",
+    public JianApp(public let name!: String, public let help!: String = "",
         private let stderr!: OutputStream = getStdErr()) {}
 
     /**
@@ -22,7 +22,7 @@ public class App {
      *
      * throws IllegalArgumentException if a command or sub-app already has this name.
      */
-    public func add(command: Command): App {
+    public func add(command: JianCommand): JianApp {
         requireAvailable(command.name)
         commands.add(command)
         this
@@ -33,7 +33,7 @@ public class App {
      *
      * throws IllegalArgumentException if a command or sub-app already has this name.
      */
-    public func add(app: App): App {
+    public func add(app: JianApp): JianApp {
         requireAvailable(app.name)
         apps.add(app)
         this
@@ -43,7 +43,7 @@ public class App {
      * Sets the callback that consumes app options before command dispatch,
      * replacing any previous callback. Returns this app for chaining.
      */
-    public func callback(value: Callback): App {
+    public func callback(value: JianCallback): JianApp {
         appCallback = Some(value)
         this
     }
@@ -51,7 +51,7 @@ public class App {
     /**
      * Runs argv excluding the executable name and returns the command's exit code.
      * A nonzero callback code stops dispatch. A callback alone may run without a command.
-     * UsageException prints an error and basic usage to stderr and returns 2;
+     * JianUsageException prints an error and basic usage to stderr and returns 2;
      * other exceptions propagate to the caller.
      */
     public func run(argv: Array<String>): Int64 {
@@ -65,7 +65,7 @@ public class App {
                 case Some(value) => valueShorts(value.spec)
                 case None => Array<Byte>()
             }
-            let args = ArgCursor(argv, shortsTakingValue: shorts)
+            let args = JianArgCursor(argv, shortsTakingValue: shorts)
             if (let Some(value) <- appCallback) {
                 let code = value.run(args)
                 if (code != 0) {
@@ -73,25 +73,25 @@ public class App {
                 }
             }
             let commandName = match (args.next()) {
-                case Some(Arg.Operand(value)) => value
-                case Some(Arg.Long(value)) =>
-                    throw UsageException.unknownOption("--" + value)
-                case Some(Arg.Long(value, _)) =>
-                    throw UsageException.unknownOption("--" + value)
-                case Some(Arg.Short(value)) =>
-                    throw UsageException.unknownOption("-" + String.fromUtf8([value]))
-                case Some(Arg.Short(value, _)) =>
-                    throw UsageException.unknownOption("-" + String.fromUtf8([value]))
+                case Some(JianArg.Operand(value)) => value
+                case Some(JianArg.Long(value)) =>
+                    throw JianUsageException.unknownOption("--" + value)
+                case Some(JianArg.Long(value, _)) =>
+                    throw JianUsageException.unknownOption("--" + value)
+                case Some(JianArg.Short(value)) =>
+                    throw JianUsageException.unknownOption("-" + String.fromUtf8([value]))
+                case Some(JianArg.Short(value, _)) =>
+                    throw JianUsageException.unknownOption("-" + String.fromUtf8([value]))
                 case None =>
                     if (appCallback.isSome() && commands.isEmpty() && apps.isEmpty()) {
                         return 0
                     }
-                    throw UsageException.missingArgument("COMMAND")
+                    throw JianUsageException.missingArgument("COMMAND")
             }
             for (command in commands) {
                 if (command.name == commandName) {
                     usage = "Usage: ${path} ${commandName} [ARGS]...\n"
-                    return command.run(ArgCursor(args.remaining(), shortsTakingValue: valueShorts(command.spec)))
+                    return command.run(JianArgCursor(args.remaining(), shortsTakingValue: valueShorts(command.spec)))
                 }
             }
             for (app in apps) {
@@ -100,8 +100,8 @@ public class App {
                     return app.dispatch(args.remaining(), path + " " + commandName, errors)
                 }
             }
-            throw UsageException("unknown command '${commandName}'")
-        } catch (error: UsageException) {
+            throw JianUsageException("unknown command '${commandName}'")
+        } catch (error: JianUsageException) {
             errors.write(("Error: ${error.message}\n" + usage).toArray())
             errors.flush()
             2
@@ -122,10 +122,10 @@ public class App {
     }
 }
 
-private func valueShorts(spec: CommandSpec): Array<Byte> {
+private func valueShorts(spec: JianCommandSpec): Array<Byte> {
     let shorts = ArrayList<Byte>()
     for (param in spec.params) {
-        if (param.kind == ParamKind.ValueOption) {
+        if (param.kind == JianParamKind.ValueOption) {
             if (let Some(value) <- param.short) {
                 shorts.add(value)
             }

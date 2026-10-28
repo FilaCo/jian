@@ -1,7 +1,6 @@
 package jian.api_tests
 
 import jian.*
-import jian.runtime.Option as OptionMarker
 import std.deriving.*
 import std.unittest.*
 import std.unittest.testmacro.*
@@ -13,19 +12,19 @@ private struct ParamResult {
 
 private var paramResult = ParamResult(false, false, 0)
 
-@Command
-func paramOptions(verbose!: Bool = Option(short: 'v', help: "Verbose output", default: false),
-    quiet!: Bool = Option(short: 'q', hidden: true, default: false),
-    times!: Int64 = Option(short: 't', help: "Repetitions", default: 1)): Int64 {
+@JianCommand
+func paramOptions(verbose!: Bool = JianOption(short: 'v', help: "Verbose output", default: false),
+    quiet!: Bool = JianOption(short: 'q', hidden: true, default: false),
+    times!: Int64 = JianOption(short: 't', help: "Repetitions", default: 1)): Int64 {
     paramResult = ParamResult(verbose, quiet, times)
     times
 }
 
-@Command
-func paramOperand(path!: String = Argument(help: "Input path", hidden: true)): Int64 { path.size }
+@JianCommand
+func paramOperand(path!: String = JianArgument(help: "Input path", hidden: true)): Int64 { path.size }
 
-@Command
-func paramDefault(count!: Int64 = Option(default: 2)): Int64 { count }
+@JianCommand
+func paramDefault(count!: Int64 = JianOption(default: 2)): Int64 { count }
 
 @Test
 class ParameterMarkerTest {
@@ -47,14 +46,14 @@ class ParameterMarkerTest {
         @Expect(params[2].help, "Repetitions")
         @Expect(ParamOperandCommand().spec.params[0].help, "Input path")
         @Expect(ParamOperandCommand().spec.params[0].hidden, true)
-        @Expect(ParamDefaultCommand().run(ArgCursor([])), 2)
+        @Expect(ParamDefaultCommand().run(JianArgCursor([])), 2)
         @Expect(ParamDefaultCommand().spec.params[0].short, None)
     }
 
     @TestCase
     func parsesFlagsAndAttachedValuesFromShortClusters() {
         // arrange
-        let app = App(name: "test").add(ParamOptionsCommand())
+        let app = JianApp(name: "test").add(ParamOptionsCommand())
 
         // act
         let code = app.run(["param-options", "-vqt3"])
@@ -80,61 +79,76 @@ private func markerDefault(): String {
     "fallback"
 }
 
-@Command
+@JianCommand
 func mixedMarkers(prefix: String,
-    name!: String = Argument(help: "Name"),
-    files!: Array<String> = Argument(default: [], help: "Files"),
-    count!: Int64 = Option(short: 'c', default: 2),
+    name!: String = JianArgument(help: "Name"),
+    files!: Array<String> = JianArgument(default: [], help: "Files"),
+    count!: Int64 = JianOption(short: 'c', default: 2),
     plain!: ?String): Int64 {
     markerObserved = "${prefix}:${name}:${files}:${plain ?? "none"}"
     count
 }
 
-@Command
-func markerDefaults(first!: String = Argument(default: markerDefault()),
-    second!: String = Option(default: markerPrefix + first)): Int64 {
+@JianCommand
+func markerDefaults(first!: String = JianArgument(default: markerDefault()),
+    second!: String = JianOption(default: markerPrefix + first)): Int64 {
     markerObserved = second
     second.size
 }
 
-@Command
-func markerOptional(value!: MarkerMaybeInt = Option(),
-    operand!: ?String = Argument(),
-    fallback!: ?Int64 = Option(default: Some(3)),
-    absent!: ?String = Option(default: None)): Int64 {
+@JianCommand
+func markerOptional(value!: MarkerMaybeInt = JianOption(),
+    operand!: ?String = JianArgument(),
+    fallback!: ?Int64 = JianOption(default: Some(3)),
+    absent!: ?String = JianOption(default: None)): Int64 {
     markerObserved = "${operand ?? "none"}:${absent ?? "none"}"
     (value ?? 0) + (fallback ?? 0)
 }
 
-@Command
-func requiredMarkers(flag!: Bool = Option(short: 'f'),
-    paths!: Array<String> = Option(short: 'p')): Int64 {
+@JianCommand
+func requiredMarkers(flag!: Bool = JianOption(short: 'f'),
+    paths!: Array<String> = JianOption(short: 'p')): Int64 {
     if (flag) { paths.size } else { 0 }
 }
 
-@Command
-func requiredOperand(value!: String = Argument()): Int64 { value.size }
+@JianCommand
+func requiredOperand(value!: String = JianArgument()): Int64 { value.size }
 
-@Command
-func requiredArray(values!: Array<Int64> = Argument()): Int64 { values.size }
+@JianCommand
+func requiredArray(values!: Array<Int64> = JianArgument()): Int64 { values.size }
 
-@Callback
-func markerConfigure(workspace!: String = Argument(help: "Workspace"),
-    verbose!: Bool = Option(short: 'v', default: false),
-    count!: Int64 = Option(short: 'c', default: 1)): Unit {
+@JianCallback
+func markerConfigure(workspace!: String = JianArgument(help: "Workspace"),
+    verbose!: Bool = JianOption(short: 'v', default: false),
+    count!: Int64 = JianOption(short: 'c', default: 1)): Unit {
     markerObserved = "${workspace}:${verbose}:${count}"
 }
 
-private func unprocessedOption(value!: Int64 = OptionMarker(help: "Value")): Int64 { value }
-private func unprocessedArgument(value!: String = Argument(default: "ignored")): String { value }
+private func unprocessedOption(value!: Int64 = JianOption(help: "Value")): Int64 { value }
+private func unprocessedArgument(value!: String = JianArgument(default: "ignored")): String { value }
 
 @Test
 class ParameterBehaviorTest {
     @TestCase
+    func standardOptionTypeAndStaticMembersWorkWithoutImportAliases() {
+        // arrange
+        let value: Option<Int64> = Some(7)
+
+        // act
+        let absent = Option<Int64>.whenAbsent()
+        let takesValue = Option<Int64>.takesValue()
+
+        // assert
+        @Expect(value, Some(7))
+        @Expect(absent, Some(None))
+        @Expect(takesValue, true)
+    }
+
+    @TestCase
     func combinesExplicitPositionalsWithInferredParametersAndShortOptions() {
         // arrange
         let command = MixedMarkersCommand()
-        let app = App(name: "test").add(command)
+        let app = JianApp(name: "test").add(command)
 
         // act
         let code = app.run(["mixed-markers", "prefix", "name", "a", "-c4", "b", "--plain=yes"])
@@ -142,7 +156,7 @@ class ParameterBehaviorTest {
         // assert
         @Expect(code, 4)
         @Expect(markerObserved, "prefix:name:[a, b]:yes")
-        @Expect(command.spec.params[1].kind, ParamKind.Positional)
+        @Expect(command.spec.params[1].kind, JianParamKind.Positional)
         @Expect(command.spec.params[1].required, true)
         @Expect(command.spec.params[2].repeatable, true)
         @Expect(command.spec.params[2].required, false)
@@ -158,17 +172,17 @@ class ParameterBehaviorTest {
 
         // act
         let metadata = command.spec
-        let explicitCode = command.run(ArgCursor(["given", "--second=explicit"]))
+        let explicitCode = command.run(JianArgCursor(["given", "--second=explicit"]))
 
         // assert
         @Expect(metadata.params[0].defaultShown.getOrThrow().replace(" ", ""), "markerDefault()")
         @Expect(metadata.params[1].defaultShown.getOrThrow().replace(" ", ""), "markerPrefix+first")
         @Expect(markerDefaultCalls, 0)
         @Expect(explicitCode, 8)
-        @Expect(command.run(ArgCursor(["given"])), 13)
+        @Expect(command.run(JianArgCursor(["given"])), 13)
         @Expect(markerObserved, "private:given")
         @Expect(markerDefaultCalls, 0)
-        command.run(ArgCursor([]))
+        command.run(JianArgCursor([]))
         @Expect(markerObserved, "private:fallback")
         @Expect(markerDefaultCalls, 1)
         markerDefaults()
@@ -182,7 +196,7 @@ class ParameterBehaviorTest {
         let command = MarkerOptionalCommand()
 
         // act
-        let code = command.run(ArgCursor([]))
+        let code = command.run(JianArgCursor([]))
 
         // assert
         @Expect(code, 3)
@@ -193,7 +207,7 @@ class ParameterBehaviorTest {
         @Expect(command.spec.params[0].defaultShown, None)
         @Expect(command.spec.params[1].defaultShown, None)
         @Expect(command.spec.params[3].defaultShown, Some("None"))
-        @Expect(command.run(ArgCursor(["text", "--value=4", "--fallback=5", "--absent=set"])), 9)
+        @Expect(command.run(JianArgCursor(["text", "--value=4", "--fallback=5", "--absent=set"])), 9)
         @Expect(markerObserved, "text:set")
         @Expect(markerOptional(value: None, operand: None), 3)
     }
@@ -204,10 +218,10 @@ class ParameterBehaviorTest {
         let command = RequiredMarkersCommand()
 
         // act
-        let noFlag = @AssertThrows[UsageException](command.run(ArgCursor([])))
-        let noPaths = @AssertThrows[UsageException](command.run(ArgCursor(["--flag"])))
-        let noOperand = @AssertThrows[UsageException](RequiredOperandCommand().run(ArgCursor([])))
-        let noArray = @AssertThrows[UsageException](RequiredArrayCommand().run(ArgCursor([])))
+        let noFlag = @AssertThrows[JianUsageException](command.run(JianArgCursor([])))
+        let noPaths = @AssertThrows[JianUsageException](command.run(JianArgCursor(["--flag"])))
+        let noOperand = @AssertThrows[JianUsageException](RequiredOperandCommand().run(JianArgCursor([])))
+        let noArray = @AssertThrows[JianUsageException](RequiredArrayCommand().run(JianArgCursor([])))
 
         // assert
         @Expect(noFlag.message, "missing argument '--flag'")
@@ -216,9 +230,9 @@ class ParameterBehaviorTest {
         @Expect(noArray.message, "missing argument 'VALUES'")
         @Expect(command.spec.params[0].required, true)
         @Expect(command.spec.params[1].required, true)
-        @Expect(command.run(ArgCursor(["--flag", "--paths=a", "--paths=b"])), 2)
-        @Expect(RequiredOperandCommand().run(ArgCursor(["name"])), 4)
-        @Expect(RequiredArrayCommand().run(ArgCursor(["1", "2"])), 2)
+        @Expect(command.run(JianArgCursor(["--flag", "--paths=a", "--paths=b"])), 2)
+        @Expect(RequiredOperandCommand().run(JianArgCursor(["name"])), 4)
+        @Expect(RequiredArrayCommand().run(JianArgCursor(["1", "2"])), 2)
         @Expect(requiredOperand(value: "direct"), 6)
     }
 
@@ -226,7 +240,7 @@ class ParameterBehaviorTest {
     func callbacksParseMarkerPositionalsAndShortClustersBeforeDispatch() {
         // arrange
         let callback = MarkerConfigureCallback()
-        let app = App(name: "test").callback(callback).add(ParamDefaultCommand())
+        let app = JianApp(name: "test").callback(callback).add(ParamDefaultCommand())
 
         // act
         let code = app.run(["project", "-vc3", "param-default"])
@@ -234,7 +248,7 @@ class ParameterBehaviorTest {
         // assert
         @Expect(code, 2)
         @Expect(markerObserved, "project:true:3")
-        @Expect(callback.spec.params[0].kind, ParamKind.Positional)
+        @Expect(callback.spec.params[0].kind, JianParamKind.Positional)
         @Expect(callback.spec.params[0].help, "Workspace")
         @Expect(callback.spec.params[1].short, Some(b'v'))
         markerConfigure(workspace: "direct")
@@ -244,14 +258,14 @@ class ParameterBehaviorTest {
     @TestCase
     func markersThrowWhenEvaluatedOutsideCommandOrCallbackDefaults() {
         // arrange
-        let expectedOption = "Option must be a parameter default in @Command or @Callback"
-        let expectedArgument = "Argument must be a parameter default in @Command or @Callback"
+        let expectedOption = "JianOption must be a parameter default in @JianCommand or @JianCallback"
+        let expectedArgument = "JianArgument must be a parameter default in @JianCommand or @JianCallback"
 
         // act
         let option = @AssertThrows[IllegalArgumentException](unprocessedOption())
         let argument = @AssertThrows[IllegalArgumentException](unprocessedArgument())
-        let directOption = @AssertThrows[IllegalArgumentException](OptionMarker<Int64>(default: 1))
-        let directArgument = @AssertThrows[IllegalArgumentException](Argument<String>())
+        let directOption = @AssertThrows[IllegalArgumentException](JianOption<Int64>(default: 1))
+        let directArgument = @AssertThrows[IllegalArgumentException](JianArgument<String>())
 
         // assert
         @Expect(option.message, expectedOption)

@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@Command
+@JianCommand
 func example(files: Array<String>, destination: String): Unit {}

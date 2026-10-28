@@ -1,7 +1,7 @@
-// expect-error: duplicate Option setting 'help'
+// expect-error: duplicate JianOption setting 'help'
 package fixture
 
 import jian.*
 
-@Command
-func example(value!: Bool = Option(help: "one", help: "two")) {}
+@JianCommand
+func example(value!: Bool = JianOption(help: "one", help: "two")) {}

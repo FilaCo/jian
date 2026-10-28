@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@Command
-func example(files!: Array<String> = Argument(), destination!: String = Argument()) {}
+@JianCommand
+func example(files!: Array<String> = JianArgument(), destination!: String = JianArgument()) {}

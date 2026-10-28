@@ -5,14 +5,14 @@ import std.ast.*
 /**
  * Generates a typed CLI adapter beside the command function, replacing CLI markers with real defaults.
  */
-public macro Command(attrs: Tokens, input: Tokens): Tokens {
+public macro JianCommand(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input)
 }
 
 /**
- * Attribute-free form of `@Command`.
+ * Attribute-free form of `@JianCommand`.
  */
-public macro Command(input: Tokens): Tokens {
+public macro JianCommand(input: Tokens): Tokens {
     commandAdapter(Tokens(), input)
 }
 
@@ -41,7 +41,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     let declaration = FuncDecl(input)
     if (declaration.isGenericDecl) {
         diagReport(DiagReportLevel.ERROR, declaration.genericParam.toTokens(),
-            "@Command does not take generic functions", "use a concrete command function")
+            "@JianCommand does not take generic functions", "use a concrete command function")
         return input
     }
     if (declaration.colon.kind == TokenKind.COLON) {
@@ -49,14 +49,14 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let spelling = result.toString().replace(" ", "")
         if (spelling != "Unit" && spelling != "Int64") {
             diagReport(DiagReportLevel.ERROR, result,
-                "@Command return type must be Unit or Int64", "omit the return type to let the compiler infer it")
+                "@JianCommand return type must be Unit or Int64", "omit the return type to let the compiler infer it")
             return input
         }
     }
     let functionName = declaration.identifier
     let sourceName = functionName.value.replace("`", "")
     let suffix = if (callback) { "Callback" } else { "Command" }
-    let interfaceName = Token(TokenKind.IDENTIFIER, suffix)
+    let interfaceName = Token(TokenKind.IDENTIFIER, "Jian" + suffix)
     let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
@@ -64,7 +64,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let settings = CallExpr(quote(__jian_settings($(attrs))))
         for (setting in settings.arguments) {
             if (setting.identifier.value != "help") {
-                throw ASTException("unknown ${suffix} setting '${setting.identifier.value}'")
+                throw ASTException("unknown Jian${suffix} setting '${setting.identifier.value}'")
             }
             help = setting.expr.toTokens()
         }
@@ -100,9 +100,9 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let optionLabel = Token(TokenKind.STRING_LITERAL, "--" + cli)
         let functionNamed = parameter.not.kind == TokenKind.NOT
         let settings = parameterSettings(parameter)
-        let named = functionNamed && settings.marker != "Argument"
-        if (settings.marker == "Option" && !functionNamed) {
-            throw ASTException("Option requires a named function parameter")
+        let named = functionNamed && settings.marker != "JianArgument"
+        if (settings.marker == "JianOption" && !functionNamed) {
+            throw ASTException("JianOption requires a named function parameter")
         }
         if (settings.marker != "") {
             // Marker expressions are declaration syntax, never runtime defaults.
@@ -158,26 +158,26 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let paramHelp = settings.help
         let hidden = settings.hidden
         let kind = if (named) {
-            quote(if (takesValueAs<$(typeName)>()) { ParamKind.ValueOption } else { ParamKind.Flag })
-        } else { quote(ParamKind.Positional) }
+            quote(if (jianTakesValueAs<$(typeName)>()) { JianParamKind.ValueOption } else { JianParamKind.Flag })
+        } else { quote(JianParamKind.Positional) }
         let shown = if (hasDefault) {
             let text = Token(TokenKind.STRING_LITERAL, parameter.expr.toTokens().toString())
             quote(Some($(text)))
         } else { quote(None) }
-        let required = if (hasDefault) { quote(false) } else { quote(whenAbsentAs<$(typeName)>().isNone()) }
-        specs += quote(ParamSpec($(cliLiteral), kind: $(kind), metavar: metavarAs<$(typeName)>(),
+        let required = if (hasDefault) { quote(false) } else { quote(jianWhenAbsentAs<$(typeName)>().isNone()) }
+        specs += quote(JianParamSpec($(cliLiteral), kind: $(kind), metavar: jianMetavarAs<$(typeName)>(),
             short: $(short), help: $(paramHelp), hidden: $(hidden), defaultShown: $(shown), required: $(required), repeatable: $(repeatable)),)
         storage += quote(var $(slot): Option<$(typeName)> = None;)
         if (named) {
             options += quote(
                 if (__jian_name == $(cliLiteral)) {
                     let __jian_raw: ?String = if (__jian_attached.isSome()) { __jian_attached }
-                        else if (takesValueAs<$(typeName)>()) { Some(__jian_args.nextValue($(optionLabel))) }
+                        else if (jianTakesValueAs<$(typeName)>()) { Some(__jian_args.nextValue($(optionLabel))) }
                         else { None }
                     try {
-                        $(slot) = Some(acceptAs<$(typeName)>($(slot), __jian_raw))
-                    } catch (__jian_error: InvalidValueException) {
-                        throw UsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
+                        $(slot) = Some(jianAcceptAs<$(typeName)>($(slot), __jian_raw))
+                    } catch (__jian_error: JianInvalidValueException) {
+                        throw JianUsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
                     }
                     continue
                 }
@@ -189,9 +189,9 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             operands += quote(
                 if (__jian_position == $(ordinal)) {
                     try {
-                        $(slot) = Some(acceptAs<$(typeName)>($(slot), Some(__jian_operand)))
-                    } catch (__jian_error: InvalidValueException) {
-                        throw UsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
+                        $(slot) = Some(jianAcceptAs<$(typeName)>($(slot), Some(__jian_operand)))
+                    } catch (__jian_error: JianInvalidValueException) {
+                        throw JianUsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
                     }
                     $(advance)
                     continue
@@ -200,7 +200,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             positional++
         }
         let absent = if (hasDefault) { parameter.expr.toTokens() }
-            else { quote(whenAbsentAs<$(typeName)>() ?? throw UsageException.missingArgument($(label))) }
+            else { quote(jianWhenAbsentAs<$(typeName)>() ?? throw JianUsageException.missingArgument($(label))) }
         // Bind original names in order so defaults retain their lexical dependencies.
         bindings += quote(let $(identifier): $(typeName) = $(slot) ?? ($(absent));)
         if (index > 0) { arguments += quote(,) }
@@ -208,17 +208,17 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     }
     let commandName = if (callback) { Tokens() } else { quote(public prop name: String { get() { $(name) } }) }
     let positionalCount = Token(TokenKind.INTEGER_LITERAL, positional.toString())
-    // Look ahead so the callback leaves the command name and its options for App.
+    // Look ahead so the callback leaves the command name and its options for JianApp.
     let boundary = if (callback) { quote(
         if (__jian_position >= $(positionalCount)) {
-            if (let Arg.Operand(_) <- __jian_arg) { break }
+            if (let JianArg.Operand(_) <- __jian_arg) { break }
         }
     ) } else { Tokens() }
     declaration.toTokens() + quote(
         public class $(className) <: $(interfaceName) {
             $(commandName)
-            public prop spec: CommandSpec { get() { CommandSpec(help: $(help), params: [$(specs)]) } }
-            public func run(__jian_args: ArgCursor): Int64 {
+            public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), params: [$(specs)]) } }
+            public func run(__jian_args: JianArgCursor): Int64 {
                 $(storage)
                 var __jian_position = 0
                 while (let Some(__jian_arg) <- __jian_args.peek()) {
@@ -227,30 +227,30 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
                     var __jian_name = ""
                     var __jian_attached: ?String = None
                     match (__jian_arg) {
-                        case Arg.Operand(__jian_operand) =>
+                        case JianArg.Operand(__jian_operand) =>
                             $(operands)
-                            throw UsageException("unexpected argument '${__jian_operand}'")
-                        case Arg.Long(__jian_long) => __jian_name = __jian_long
-                        case Arg.Long(__jian_long, __jian_raw) =>
+                            throw JianUsageException("unexpected argument '${__jian_operand}'")
+                        case JianArg.Long(__jian_long) => __jian_name = __jian_long
+                        case JianArg.Long(__jian_long, __jian_raw) =>
                             __jian_name = __jian_long
                             __jian_attached = Some(__jian_raw)
-                        case Arg.Short(__jian_short) =>
+                        case JianArg.Short(__jian_short) =>
                             $(shorts)
                             if (__jian_name.isEmpty()) {
-                                throw UsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
+                                throw JianUsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
                             }
-                        case Arg.Short(__jian_short, __jian_raw) =>
+                        case JianArg.Short(__jian_short, __jian_raw) =>
                             $(shorts)
                             if (__jian_name.isEmpty()) {
-                                throw UsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
+                                throw JianUsageException.unknownOption("-" + String.fromUtf8([__jian_short]))
                             }
                             __jian_attached = Some(__jian_raw)
                     }
                     $(options)
-                    throw UsageException.unknownOption("--" + __jian_name)
+                    throw JianUsageException.unknownOption("--" + __jian_name)
                 }
                 $(bindings)
-                exitCode($(functionName)($(arguments)))
+                jianExitCode($(functionName)($(arguments)))
             }
         }
     )

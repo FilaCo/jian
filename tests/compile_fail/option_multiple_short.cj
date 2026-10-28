@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@Command
-func example(value!: Bool = Option(short: 'ab')) {}
+@JianCommand
+func example(value!: Bool = JianOption(short: 'ab')) {}

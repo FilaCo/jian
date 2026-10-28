@@ -22,7 +22,7 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
         case None => return settings
     }
     let marker = reference.identifier.value
-    if (marker != "Option" && marker != "Argument") { return settings }
+    if (marker != "JianOption" && marker != "JianArgument") { return settings }
     if (!reference.typeArguments.isEmpty()) {
         throw ASTException("${marker} takes its type from the parameter declaration")
     }
@@ -34,7 +34,7 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
             throw ASTException("${marker} settings must be named")
         }
         let key = argument.identifier.value
-        if (!["default", "help", "hidden"].contains(key) && !(marker == "Option" && key == "short")) {
+        if (!["default", "help", "hidden"].contains(key) && !(marker == "JianOption" && key == "short")) {
             throw ASTException("unknown ${marker} setting '${key}'")
         }
         if (seen.contains("," + key + ",")) {
@@ -54,5 +54,5 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
 }
 
 func isNamedCLI(parameter: FuncParam): Bool {
-    parameter.not.kind == TokenKind.NOT && parameterSettings(parameter).marker != "Argument"
+    parameter.not.kind == TokenKind.NOT && parameterSettings(parameter).marker != "JianArgument"
 }

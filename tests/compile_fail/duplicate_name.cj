@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@Command
+@JianCommand
 func example(sync_all!: Bool, syncAll!: Bool): Unit {}

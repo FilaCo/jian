@@ -1,7 +1,7 @@
-// expect-error: unknown Argument setting 'other'
+// expect-error: unknown JianArgument setting 'other'
 package fixture
 
 import jian.*
 
-@Command
-func example(value!: String = Argument(other: true)) {}
+@JianCommand
+func example(value!: String = JianArgument(other: true)) {}

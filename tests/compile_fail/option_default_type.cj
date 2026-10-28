@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@Command
-func example(value!: Int64 = Option(default: "bad")) {}
+@JianCommand
+func example(value!: Int64 = JianOption(default: "bad")) {}

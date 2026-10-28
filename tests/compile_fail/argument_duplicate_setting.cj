@@ -1,7 +1,7 @@
-// expect-error: duplicate Argument setting 'default'
+// expect-error: duplicate JianArgument setting 'default'
 package fixture
 
 import jian.*
 
-@Command
-func example(value!: String = Argument(default: "a", default: "b")) {}
+@JianCommand
+func example(value!: String = JianArgument(default: "a", default: "b")) {}

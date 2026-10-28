@@ -3,6 +3,6 @@ package fixture
 
 import jian.*
 
-@Command
-func example(value!: String = Argument()) {}
+@JianCommand
+func example(value!: String = JianArgument()) {}
 func caller() { example() }
