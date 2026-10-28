@@ -140,7 +140,7 @@ class AppTest {
 
         // assert
         @Expect(code, 2)
-        @Expect(String.fromUtf8(errors.bytes()), "Error: missing argument 'PATH'\nUsage: demo admin sync [ARGS]...\n")
+        @Expect(String.fromUtf8(errors.bytes()), "Error: missing argument 'PATH'\nUsage: demo admin sync [OPTIONS]\n")
         @Expect(childErrors.bytes().isEmpty(), true)
     }
 
@@ -215,7 +215,7 @@ class AppTest {
 
         // assert
         @Expect(code, 2)
-        @Expect(String.fromUtf8(errors.bytes()), "Error: missing argument '--config'\nUsage: demo [OPTIONS] COMMAND [ARGS]...\n")
+        @Expect(String.fromUtf8(errors.bytes()), "Error: missing argument '--config'\nUsage: demo [OPTIONS]\n")
     }
 
     @TestCase
