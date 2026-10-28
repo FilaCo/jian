@@ -61,8 +61,10 @@ func commandHelp(path: String, spec: JianCommandSpec): String {
     "${usage}${description}${parameters}"
 }
 
-// Scan with the same cursor rules as parsing: option values and operands after
-// `--` must never turn into help requests. JianApp scanning stops at its subcommand.
+/**
+ * Detects help requests using the parser's cursor rules, excluding option values
+ * and operands after `--`. App scanning stops at its subcommand.
+ */
 func requestsHelp(argv: Array<String>, spec: JianCommandSpec, app!: Bool = false): Bool {
     let args = JianArgCursor(argv, shortsTakingValue: valueShorts(spec))
     let positionals = spec.inputs.filter({ param => param.kind == JianInputKind.Positional })
