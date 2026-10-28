@@ -10,19 +10,24 @@ jian currently targets Cangjie 1.3.0 alpha nightlies. The examples are checked
 with `cjc 1.3.0-alpha.20261014001050`; older SDKs may not support the macro API.
 Load your SDK environment before running `cjpm`.
 
-Clone the repository beside your application:
+Create an application:
 
 ```bash
-git clone https://github.com/FilaCo/jian.git
 cjpm init --type=executable --path demo --name demo
 ```
 
-Add a local dependency to `demo/cjpm.toml`:
+Add a git dependency to `demo/cjpm.toml`:
 
 ```toml
 [dependencies]
-jian = { path = "../jian" }
+jian = { git = "https://github.com/FilaCo/jian.git", branch = "master" }
 ```
+
+cjpm downloads jian when you build the application and records the selected
+commit in `cjpm.lock`. Commit that file to keep builds on the same revision;
+use `cjpm update` to update dependencies. To select a specific revision directly,
+replace `branch` with `commitId`. See the
+[cjpm dependency reference](https://github.com/Cangjie-Pub/cangjie_tools/blob/dev/cjpm/doc/user_guide.md#dependencies).
 
 Only one import is needed: `import jian.*` includes the macros and runtime API.
 See [Development](docs/development.md) for toolchain setup and checks.
