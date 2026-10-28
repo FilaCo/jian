@@ -4,6 +4,7 @@ import std.ast.*
 
 /**
  * Generates a typed CLI adapter beside the command function, replacing CLI markers with real defaults.
+ * JianFromContext<C>() parameters are injected by type and remain required in direct calls.
  */
 public macro JianCommand(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input)
@@ -56,7 +57,23 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     }
     let functionName = declaration.identifier
     let sourceName = functionName.value.replace("`", "")
-    let interfaceName = Token(TokenKind.IDENTIFIER, "Jian" + suffix)
+    var contextType = Tokens()
+    for (parameter in declaration.funcParams) {
+        let injected = parameterSettings(parameter).contextType
+        if (injected.size != 0) {
+            if (contextType.size != 0 && contextType.toString().replace(" ", "") != injected.toString().replace(" ", "")) {
+                throw ASTException("all JianFromContext parameters must use the same context type")
+            }
+            contextType = injected
+        }
+    }
+    let interfaceToken = Token(TokenKind.IDENTIFIER, if (contextType.size == 0) { "Jian" + suffix }
+        else { "JianContext" + suffix })
+    let interfaceName = if (contextType.size == 0) { quote($(interfaceToken)) }
+        else { quote($(interfaceToken)<$(contextType)>) }
+    let contextArgument = if (contextType.size == 0) { Tokens() }
+        else { quote(, __jian_context: $(contextType)) }
+    let visibility = if (contextType.size == 0) { quote(public) } else { contextVisibility(declaration) }
     let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
@@ -84,6 +101,14 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let identifier = parameter.identifier
         let typeName = parameter.paramType.toTokens()
         let slot = Token(TokenKind.IDENTIFIER, "__jian_value_${index}")
+        let settings = parameterSettings(parameter)
+        if (settings.marker == "JianFromContext") {
+            declaration.funcParams[index] = withoutDefault(parameter)
+            bindings += quote(let $(identifier): $(typeName) = $(contextType).jianFromContext<$(typeName)>(__jian_context);)
+            if (index > 0) { arguments += quote(,) }
+            arguments += quote($(identifier): $(identifier))
+            continue
+        }
         let cli = cliName(identifier.value.replace("`", ""))
         if (names.contains(cli)) {
             diagReport(DiagReportLevel.ERROR, quote($(identifier)),
@@ -99,7 +124,6 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let cliLiteral = Token(TokenKind.STRING_LITERAL, cli)
         let optionLabel = Token(TokenKind.STRING_LITERAL, "--" + cli)
         let functionNamed = parameter.not.kind == TokenKind.NOT
-        let settings = parameterSettings(parameter)
         let named = functionNamed && settings.marker != "JianArgument"
         if (settings.marker == "JianOption" && !functionNamed) {
             throw ASTException("JianOption requires a named function parameter")
@@ -112,16 +136,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             } else if (implicitNone) {
                 parameter.expr = parseExpr(quote(None))
             } else {
-                let original = parameter.toTokens()
-                var plain = Tokens()
-                for (token in original) {
-                    if (token.kind == TokenKind.ASSIGN) { break }
-                    plain.append(token)
-                }
-                if (original[original.size - 1].kind == TokenKind.COMMA) {
-                    plain.append(original[original.size - 1])
-                }
-                declaration.funcParams[index] = FuncParam(plain)
+                declaration.funcParams[index] = withoutDefault(parameter)
             }
         }
         if (implicitNone && parameter.assign.kind != TokenKind.ASSIGN) {
@@ -222,10 +237,10 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         }
     ) } else { Tokens() }
     declaration.toTokens() + quote(
-        public class $(className) <: $(interfaceName) {
+        $(visibility) class $(className) <: $(interfaceName) {
             $(commandName)
             public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)]) } }
-            public func run(__jian_args: JianArgCursor): Int64 {
+            public func run(__jian_args: JianArgCursor $(contextArgument)): Int64 {
                 $(storage)
                 var __jian_position = 0
                 while (let Some(__jian_arg) <- __jian_args.peek()) {

@@ -24,3 +24,13 @@ public func JianArgument<T>(default!: ?T = None, help!: String = "", hidden!: Bo
     let _ = (default, help, hidden)
     throw IllegalArgumentException("JianArgument must be a function parameter default in @JianCommand or @JianCallback")
 }
+
+/**
+ * Injects a dependency from context C into a @JianCommand or @JianCallback parameter.
+ * Its declared parameter type selects the dependency. The macro removes the default,
+ * so direct callers must supply it. No CLI input is created.
+ * Throws IllegalArgumentException if evaluated outside macro processing.
+ */
+public func JianFromContext<C>(): C {
+    throw IllegalArgumentException("JianFromContext must be a function parameter default in @JianCommand or @JianCallback")
+}

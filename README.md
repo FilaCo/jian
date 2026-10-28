@@ -135,6 +135,42 @@ App options go before the subcommand; options after it belong to that command
 or sub-app. Callbacks run before the selected command. A nonzero callback exit
 code stops dispatch. A callback-only app may run without a subcommand.
 
+## Typed context
+
+Use `@JianContext` on an application state class and request its fields with
+`JianFromContext<C>()`. The parameter's declared type selects the field; requesting
+`C` itself supplies the whole context. Injected dependencies never become CLI
+arguments or options and do not need `JianArgValue`.
+
+```cangjie
+@JianContext
+class AppContext {
+    public let logger: Logger = Logger()
+}
+
+@JianCallback
+func configure(ctx!: AppContext = JianFromContext<AppContext>(), verbose!: Bool = false): Unit {
+    ctx.logger.verbose = verbose
+}
+
+@JianCommand
+func greet(name: String, logger!: Logger = JianFromContext<AppContext>()): Unit {
+    logger.greet(name)
+}
+
+// Create the context outside commands and callbacks; supply it on every run.
+let context = AppContext()
+let app = JianContextApp<AppContext>(name: "demo")
+    .callback(ConfigureCallback())
+    .add(GreetCommand())
+app.run(["--verbose", "greet", "Alice"], context: context)
+```
+
+Here `Logger` is an application-defined class. The runnable
+[context example](examples/context/src/main.cj) includes its implementation and
+passes context through a nested app. See [Typed context](docs/context.md) for
+lifetime, type restrictions and direct calls.
+
 ## Custom value types
 
 Implement `JianArgValue<T>` on your type to define its CLI behavior:
@@ -193,6 +229,7 @@ Run it from its directory with `cjpm run -- ...`.
 | [sync](examples/sync/src/main.cj) | Variadic paths, repeated options, optional values | `sync src docs -nj4 -x target --exclude=.git` |
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |
 | [custom_type](examples/custom_type/src/main.cj) | User-defined enum parsing | `paint --color blue` |
+| [context](examples/context/src/main.cj) | Typed dependencies, callback configuration and nested app | `--verbose people greet Alice` |
 
 The sync and deploy examples only print plans; they do not modify files or deploy.
 Run the complete check suite from the repository root:
