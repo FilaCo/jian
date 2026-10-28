@@ -25,12 +25,31 @@ so the SDK and `cog` must also be available to the process running Git.
 
 ## Build and test
 
+Run the complete suite (also used by the `pre-push` hook):
+
+```bash
+bash tests/check.sh
+```
+
+It runs unit tests, failing-consumer diagnostics and standalone example checks.
+For individual checks:
+
 ```bash
 cjpm build
 cjpm test --target-dir target/test
 cjpm test --target-dir target/test src/runtime
 cjpm test --target-dir target/test '--filter=ArgCursorTest.*'
 bash tests/check_compile_fail.sh
+bash tests/check_examples.sh
+```
+
+Each `examples/*` directory is a standalone executable with a path dependency
+on the repository root. The example check builds every manifest and checks CLI
+output and exit codes, including an invalid custom value. To try one manually:
+
+```bash
+cd examples/greet
+cjpm run -- greet Alice -lt2
 ```
 
 Builds and tests use separate target directories because sharing one invalidates
@@ -57,7 +76,7 @@ so ordinary `cjpm test` can still compile and run all valid consumer tests.
 
 Use Conventional Commits (`type(scope): subject`); breaking changes use `!` or a
 `BREAKING CHANGE:` footer. Target `master`. `.githooks/commit-msg` calls
-`cog verify`; `.githooks/pre-push` checks whitespace and runs unit tests.
+`cog verify`; `.githooks/pre-push` checks whitespace and runs the complete suite.
 Run any macro consumer checks appropriate to the change before review.
 The GitHub workflow checks the PR's commits and title, including title edits.
 

@@ -1,0 +1,8 @@
+[package]
+name = "sync_example"
+version = "0.1.0"
+cjc-version = "1.3.0"
+output-type = "executable"
+
+[dependencies]
+jian = { path = "../.." }

@@ -2,4 +2,4 @@
 set -eu
 
 git diff --check
-cjpm test --target-dir target/test
+bash tests/check.sh
