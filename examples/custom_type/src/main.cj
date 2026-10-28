@@ -28,5 +28,5 @@ func paint(color!: Color = JianOption(short: 'c', help: "red or blue")): Unit {
 }
 
 main(args: Array<String>): Int64 {
-    JianApp(name: "demo").add(PaintCommand()).run(args)
+    JianApp<JianNoContext>(name: "demo").add(PaintCommand()).run(args)
 }

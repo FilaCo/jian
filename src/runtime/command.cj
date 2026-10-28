@@ -39,3 +39,28 @@ public interface JianCallback {
      */
     func run(args: JianArgCursor): Int64
 }
+
+/**
+ * A generated command adapter that receives the app's concrete context type.
+ */
+public interface JianContextCommand<C> {
+    prop name: String
+    prop spec: JianCommandSpec
+
+    /**
+     * Parses CLI inputs and invokes the command; malformed CLI input throws JianUsageException.
+     */
+    func run(args: JianArgCursor, context: C): Int64
+}
+
+/**
+ * A generated app callback that receives the same context as the selected command.
+ */
+public interface JianContextCallback<C> {
+    prop spec: JianCommandSpec
+
+    /**
+     * Parses app inputs up to the command; malformed CLI input throws JianUsageException.
+     */
+    func run(args: JianArgCursor, context: C): Int64
+}

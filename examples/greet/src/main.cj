@@ -15,7 +15,7 @@ func greet(
 }
 
 main(args: Array<String>): Int64 {
-    JianApp(name: "demo", help: "A first jian CLI.")
+    JianApp<JianNoContext>(name: "demo", help: "A first jian CLI.")
         .add(GreetCommand())
         .run(args)
 }

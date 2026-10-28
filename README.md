@@ -49,7 +49,7 @@ func greet(
 }
 
 main(args: Array<String>): Int64 {
-    JianApp(name: "demo", help: "A first jian CLI.")
+    JianApp<JianNoContext>(name: "demo", help: "A first jian CLI.")
         .add(GreetCommand())
         .run(args)
 }
@@ -69,7 +69,8 @@ cjpm run -- greet --help
 
 The macro preserves `greet` as a callable function and generates `GreetCommand()`
 for registration. The command name is `greet`; camelCase and snake_case CLI names
-become kebab-case. Registration is explicit. `JianApp.run` takes arguments
+become kebab-case. Registration is explicit. `JianNoContext` is an alias for
+`Unit`, used when the app needs no injected context. `app.run` takes arguments
 excluding the executable name, which is exactly what `main(args)` receives.
 
 ## Parameters become arguments and options
@@ -114,8 +115,8 @@ for optional aliases, direct calls and marker constraints.
 ## Apps, sub-apps and callbacks
 
 Register generated command adapters with `.add(GreetCommand())`. Register a
-nested `JianApp` the same way. A function marked `@JianCallback` generates a
-`ConfigureCallback` adapter from `configure`; set it with
+nested `JianApp<JianNoContext>` the same way. A function marked `@JianCallback`
+generates a `ConfigureCallback` adapter from `configure`; set it with
 `.callback(ConfigureCallback())` to parse app-level arguments and options before
 dispatching to a command.
 
@@ -134,6 +135,42 @@ cjpm run -- project deploy --help
 App options go before the subcommand; options after it belong to that command
 or sub-app. Callbacks run before the selected command. A nonzero callback exit
 code stops dispatch. A callback-only app may run without a subcommand.
+
+## Typed context
+
+Use `@JianContext` on an application state class and request its fields with
+`JianFromContext<C>()`. The parameter's declared type selects the field; requesting
+`C` itself supplies the whole context. Injected dependencies never become CLI
+arguments or options and do not need `JianArgValue`.
+
+```cangjie
+@JianContext
+class AppContext {
+    public let logger: Logger = Logger()
+}
+
+@JianCallback
+func configure(ctx!: AppContext = JianFromContext<AppContext>(), verbose!: Bool = false): Unit {
+    ctx.logger.verbose = verbose
+}
+
+@JianCommand
+func greet(name: String, logger!: Logger = JianFromContext<AppContext>()): Unit {
+    logger.greet(name)
+}
+
+// Create the context outside commands and callbacks; supply it on every run.
+let context = AppContext()
+let app = JianApp<AppContext>(name: "demo")
+    .callback(ConfigureCallback())
+    .add(GreetCommand())
+app.run(["--verbose", "greet", "Alice"], context: context)
+```
+
+Here `Logger` is an application-defined class. The runnable
+[context example](examples/context/src/main.cj) includes its implementation and
+passes context through a nested app. See [Typed context](docs/context.md) for
+lifetime, type restrictions and direct calls.
 
 ## Custom value types
 
@@ -179,8 +216,9 @@ help for a nested target.
 | `JianUsageException` | Print error and usage to stderr, return `2` |
 | Other exception | Propagate to the caller |
 
-Return `JianApp.run(args)` from `main` to preserve these codes. The library never
-calls `exit()`. `JianApp` accepts `stdout` and `stderr` streams for testing.
+Return `app.run(args)` from `main` to preserve these codes for an app without
+context. Apps with context use `app.run(args, context: ctx)`. The library never calls
+`exit()`. `JianApp<C>` accepts `stdout` and `stderr` streams for testing.
 
 ## Examples and checks
 
@@ -193,6 +231,7 @@ Run it from its directory with `cjpm run -- ...`.
 | [sync](examples/sync/src/main.cj) | Variadic paths, repeated options, optional values | `sync src docs -nj4 -x target --exclude=.git` |
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |
 | [custom_type](examples/custom_type/src/main.cj) | User-defined enum parsing | `paint --color blue` |
+| [context](examples/context/src/main.cj) | Typed dependencies, callback configuration and nested app | `--verbose people greet Alice` |
 
 The sync and deploy examples only print plans; they do not modify files or deploy.
 Run the complete check suite from the repository root:

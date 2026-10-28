@@ -49,7 +49,7 @@ class CallbackMacroTest {
         // arrange
         callbackEvents = ""
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stderr: errors)
+        let app = JianApp<JianNoContext>(name: "demo", stderr: errors)
             .callback(ConfigureCallback()).add(LaunchCommand())
 
         // act
@@ -69,7 +69,7 @@ class CallbackMacroTest {
     func optionsAfterCommandDoNotChangeCallbackDefaults() {
         // arrange
         callbackEvents = ""
-        let app = JianApp(name: "demo").callback(ConfigureCallback()).add(LaunchCommand())
+        let app = JianApp<JianNoContext>(name: "demo").callback(ConfigureCallback()).add(LaunchCommand())
 
         // act
         let code = app.run(["launch", "--verbose"])
@@ -84,7 +84,7 @@ class CallbackMacroTest {
         // arrange
         callbackEvents = ""
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stderr: errors).callback(ConfigureCallback()).add(LaunchCommand())
+        let app = JianApp<JianNoContext>(name: "demo", stderr: errors).callback(ConfigureCallback()).add(LaunchCommand())
 
         // act
         let code = app.run(["launch", "--jobs=4"])
@@ -119,7 +119,7 @@ class CallbackMacroTest {
     func nonzeroCallbackResultPreventsCommandDispatch() {
         // arrange
         callbackEvents = ""
-        let app = JianApp(name: "demo").callback(CallbackExitCallback()).add(LaunchCommand())
+        let app = JianApp<JianNoContext>(name: "demo").callback(CallbackExitCallback()).add(LaunchCommand())
 
         // act
         let code = app.run(["--code=9", "launch"])
@@ -156,7 +156,7 @@ class CallbackMacroTest {
         @Expect(code, 0)
         @Expect(callbackEvents, "empty")
         @Expect(args.remaining(), ["--", "launch", "--verbose"])
-        @Expect(JianApp(name: "demo").callback(Empty_callbackCallback()).run([]), 0)
+        @Expect(JianApp<JianNoContext>(name: "demo").callback(Empty_callbackCallback()).run([]), 0)
     }
 
     @TestCase

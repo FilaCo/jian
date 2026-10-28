@@ -4,6 +4,7 @@ import std.ast.*
 
 class ParameterSettings {
     var marker = ""
+    var contextType = Tokens()
     var defaultValue: ?Tokens = None
     var short: ?Tokens = None
     var help = quote("")
@@ -22,6 +23,17 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
         case None => return settings
     }
     let marker = reference.identifier.value
+    if (marker == "JianFromContext") {
+        if (reference.typeArguments.size != 1 || !call.arguments.isEmpty()) {
+            throw ASTException("JianFromContext requires one context type and no arguments")
+        }
+        if (parameter.not.kind != TokenKind.NOT) {
+            throw ASTException("JianFromContext requires a named function parameter")
+        }
+        settings.marker = marker
+        settings.contextType = reference.typeArguments[0].toTokens()
+        return settings
+    }
     if (marker != "JianOption" && marker != "JianArgument") { return settings }
     if (!reference.typeArguments.isEmpty()) {
         throw ASTException("${marker} takes its type from the function parameter declaration")
@@ -54,7 +66,21 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
 }
 
 func isNamedCLI(parameter: FuncParam): Bool {
-    parameter.not.kind == TokenKind.NOT && parameterSettings(parameter).marker != "JianArgument"
+    let marker = parameterSettings(parameter).marker
+    marker == "JianFromContext" || parameter.not.kind == TokenKind.NOT && marker != "JianArgument"
+}
+
+func withoutDefault(parameter: FuncParam): FuncParam {
+    let original = parameter.toTokens()
+    var plain = Tokens()
+    for (token in original) {
+        if (token.kind == TokenKind.ASSIGN) { break }
+        plain.append(token)
+    }
+    if (original[original.size - 1].kind == TokenKind.COMMA) {
+        plain.append(original[original.size - 1])
+    }
+    FuncParam(plain)
 }
 
 // Macros run before type resolution, so aliases cannot be classified here.

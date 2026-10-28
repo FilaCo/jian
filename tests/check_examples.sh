@@ -35,6 +35,8 @@ check sub_apps 0 $'Verbose mode enabled\nDeploy to staging' '' -v project deploy
 check custom_type 0 'Painting blue' '' paint --color blue
 check custom_type 2 '' $'Error: invalid value \'green\' for \'--color\': expected red or blue\nUsage: demo paint [OPTIONS]' \
     paint --color green
+check context 0 $'Greeting Alice\nHello, Alice!' '' --verbose people greet Alice
+check context 0 'Hello, Alice!' '' people greet Alice
 
 for manifest in "$root"/examples/*/cjpm.toml; do
     example_dir=$(dirname "$manifest")

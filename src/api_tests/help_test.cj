@@ -36,7 +36,7 @@ class HelpMacroTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(HelpMarkersCommand())
+        let app = JianApp<JianNoContext>(name: "demo", stdout: output, stderr: errors).add(HelpMarkersCommand())
 
         // act
         let code = app.run(["help-markers"].concat(input))
@@ -56,7 +56,7 @@ class HelpMacroTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).callback(HelpSettingsCallback())
+        let app = JianApp<JianNoContext>(name: "demo", stdout: output, stderr: errors).callback(HelpSettingsCallback())
 
         // act
         let code = app.run(["--help"])
@@ -74,7 +74,7 @@ class HelpMacroTest {
     func handwrittenConsumerCommandsUseTheSameHelpContract() {
         // arrange
         let output = ByteBuffer()
-        let app = JianApp(name: "demo", stdout: output).add(HandwrittenHelpCommand())
+        let app = JianApp<JianNoContext>(name: "demo", stdout: output).add(HandwrittenHelpCommand())
 
         // act
         let code = app.run(["manual", "--help"])
@@ -92,7 +92,7 @@ class HelpMacroTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(HelpGreetingCommand())
+        let app = JianApp<JianNoContext>(name: "demo", stdout: output, stderr: errors).add(HelpGreetingCommand())
 
         // act
         let code = app.run(["help-greeting", "--help"])
@@ -114,7 +114,7 @@ class HelpMacroTest {
         let inputs: Array<Array<String>> = [[], ["Ann", "--x"], ["Ann", "--times=abc"]]
         let messages = ["missing argument 'NAME'", "unknown option '--x'",
             "invalid value 'abc' for '--times': expected Int64"]
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(HelpGreetingCommand())
+        let app = JianApp<JianNoContext>(name: "demo", stdout: output, stderr: errors).add(HelpGreetingCommand())
 
         // act
         let code = app.run(["help-greeting"].concat(inputs[index]))

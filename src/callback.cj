@@ -7,6 +7,7 @@ import std.ast.*
  * A function `configure` produces `ConfigureCallback`, registered with `JianApp.callback`.
  * Parses declared positional arguments and options, stopping before the command name.
  * Supports the same value types, defaults and `help` setting as `@JianCommand`.
+ * JianFromContext<C>() parameters receive dependencies from the context supplied to run.
  */
 public macro JianCallback(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input, callback: true)
