@@ -37,18 +37,34 @@ func cliName(name: String): String {
     result
 }
 
-func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
+func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Tokens {
     let declaration = FuncDecl(input)
+    if (declaration.isGenericDecl) {
+        diagReport(DiagReportLevel.ERROR, declaration.genericParam.toTokens(),
+            "@Command does not take generic functions", "use a concrete command function")
+        return input
+    }
+    if (declaration.colon.kind == TokenKind.COLON) {
+        let result = declaration.declType.toTokens()
+        let spelling = result.toString().replace(" ", "")
+        if (spelling != "Unit" && spelling != "Int64") {
+            diagReport(DiagReportLevel.ERROR, result,
+                "@Command return type must be Unit or Int64", "omit the return type to let the compiler infer it")
+            return input
+        }
+    }
     let functionName = declaration.identifier
     let sourceName = functionName.value.replace("`", "")
-    let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + "Command")
+    let suffix = if (callback) { "Callback" } else { "Command" }
+    let interfaceName = Token(TokenKind.IDENTIFIER, suffix)
+    let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
     if (attrs.size != 0) {
         let settings = CallExpr(quote(__jian_settings($(attrs))))
         for (setting in settings.arguments) {
             if (setting.identifier.value != "help") {
-                throw ASTException("unknown Command setting '${setting.identifier.value}'")
+                throw ASTException("unknown ${suffix} setting '${setting.identifier.value}'")
             }
             help = setting.expr.toTokens()
         }
@@ -63,18 +79,43 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
     let metadata = getChildMessages("Param")
     var usedShorts = ""
     var positional = 0
+    var names: Array<String> = []
     for (index in 0..declaration.funcParams.size) {
         let parameter = declaration.funcParams[index]
         let identifier = parameter.identifier
         let typeName = parameter.paramType.toTokens()
         let slot = Token(TokenKind.IDENTIFIER, "__jian_value_${index}")
         let cli = cliName(identifier.value.replace("`", ""))
+        if (names.contains(cli)) {
+            diagReport(DiagReportLevel.ERROR, quote($(identifier)),
+                "duplicate CLI parameter name '--${cli}'", "use distinct names after kebab-case conversion")
+            return input
+        }
+        if (cli == "help") {
+            diagReport(DiagReportLevel.ERROR, quote($(identifier)),
+                "parameter name '--help' is reserved", "choose another parameter name")
+            return input
+        }
+        names = names.concat([cli])
         let cliLiteral = Token(TokenKind.STRING_LITERAL, cli)
         let optionLabel = Token(TokenKind.STRING_LITERAL, "--" + cli)
         let named = parameter.not.kind == TokenKind.NOT
         let label = if (named) { optionLabel } else { Token(TokenKind.STRING_LITERAL, cli.toAsciiUpper()) }
         let hasDefault = parameter.assign.kind == TokenKind.ASSIGN
-        let repeated = typeName.toString().replace(" ", "").startsWith("Array<")
+        let repeated = match (parameter.paramType as RefType) {
+            case Some(reference) => reference.identifier.value == "Array" && reference.typeArguments.size == 1
+            case None => false
+        }
+        if (repeated && !named) {
+            for (later in index + 1..declaration.funcParams.size) {
+                if (declaration.funcParams[later].not.kind != TokenKind.NOT) {
+                    diagReport(DiagReportLevel.ERROR, typeName,
+                        "variadic Array parameter must be the last positional parameter",
+                        "move this parameter after all other positional parameters")
+                    return input
+                }
+            }
+        }
         let repeatable = if (repeated) { quote(true) } else { quote(false) }
         var short = quote(None)
         var paramHelp = quote("")
@@ -131,6 +172,8 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
             )
         } else {
             let ordinal = Token(TokenKind.INTEGER_LITERAL, positional.toString())
+            // Keep the cursor on the final array so later operands accumulate in it.
+            let advance = if (repeated) { Tokens() } else { quote(__jian_position++) }
             operands += quote(
                 if (__jian_position == $(ordinal)) {
                     try {
@@ -138,7 +181,7 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
                     } catch (__jian_error: InvalidValueException) {
                         throw UsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
                     }
-                    __jian_position++
+                    $(advance)
                     continue
                 }
             )
@@ -151,14 +194,24 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
         if (index > 0) { arguments += quote(,) }
         arguments += if (named) { quote($(identifier): $(identifier)) } else { quote($(identifier)) }
     }
+    let commandName = if (callback) { Tokens() } else { quote(public prop name: String { get() { $(name) } }) }
+    let positionalCount = Token(TokenKind.INTEGER_LITERAL, positional.toString())
+    // Look ahead so the callback leaves the command name and its options for App.
+    let boundary = if (callback) { quote(
+        if (__jian_position >= $(positionalCount)) {
+            if (let Arg.Operand(_) <- __jian_arg) { break }
+        }
+    ) } else { Tokens() }
     input + quote(
-        public class $(className) <: Command {
-            public prop name: String { get() { $(name) } }
+        public class $(className) <: $(interfaceName) {
+            $(commandName)
             public prop spec: CommandSpec { get() { CommandSpec(help: $(help), params: [$(specs)]) } }
             public func run(__jian_args: ArgCursor): Int64 {
                 $(storage)
                 var __jian_position = 0
-                while (let Some(__jian_arg) <- __jian_args.next()) {
+                while (let Some(__jian_arg) <- __jian_args.peek()) {
+                    $(boundary)
+                    __jian_args.next()
                     var __jian_name = ""
                     var __jian_attached: ?String = None
                     match (__jian_arg) {
