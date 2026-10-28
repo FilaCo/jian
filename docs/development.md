@@ -30,6 +30,7 @@ cjpm build
 cjpm test --target-dir target/test
 cjpm test --target-dir target/test src/runtime
 cjpm test --target-dir target/test '--filter=ArgCursorTest.*'
+bash tests/check_compile_fail.sh
 ```
 
 Builds and tests use separate target directories because sharing one invalidates
@@ -46,6 +47,11 @@ Build a package that imports `jian.*` and uses the changed macro. Building the
 macro package alone cannot validate its expansion, unqualified generated names
 or the runtime re-export. Check that a hand-written `Command` can implement the
 runtime contract from a consumer package as well.
+
+`bash tests/check_compile_fail.sh` builds the library, then compiles each
+`tests/compile_fail/*.cj` consumer separately. A fixture must fail and include
+its `// expect-error:` message. Keep invalid declarations in these fixtures,
+so ordinary `cjpm test` can still compile and run all valid consumer tests.
 
 ## Commits and reviews
 
