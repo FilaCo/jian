@@ -23,12 +23,6 @@ Add a git dependency to `demo/cjpm.toml`:
 jian = { git = "https://github.com/FilaCo/jian.git", branch = "master" }
 ```
 
-cjpm downloads jian when you build the application and records the selected
-commit in `cjpm.lock`. Commit that file to keep builds on the same revision;
-use `cjpm update` to update dependencies. To select a specific revision directly,
-replace `branch` with `commitId`. See the
-[cjpm dependency reference](https://github.com/Cangjie-Pub/cangjie_tools/blob/dev/cjpm/doc/user_guide.md#dependencies).
-
 Only one import is needed: `import jian.*` includes the macros and runtime API.
 See [Development](docs/development.md) for toolchain setup and checks.
 
