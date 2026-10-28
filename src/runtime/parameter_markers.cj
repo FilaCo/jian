@@ -8,13 +8,13 @@ package jian.runtime
  */
 public func JianOption<T>(short!: ?Rune = None, help!: String = "", hidden!: Bool = false): T {
     let _ = (short, help, hidden)
-    throw IllegalArgumentException("JianOption must be a parameter default in @JianCommand or @JianCallback")
+    throw IllegalArgumentException("JianOption must be a function parameter default in @JianCommand or @JianCallback")
 }
 
 /** Declares an option with a lazy default expression; throws if evaluated. */
 public func JianOption<T>(default!: T, short!: ?Rune = None, help!: String = "", hidden!: Bool = false): T {
     let _ = (default, short, help, hidden)
-    throw IllegalArgumentException("JianOption must be a parameter default in @JianCommand or @JianCallback")
+    throw IllegalArgumentException("JianOption must be a function parameter default in @JianCommand or @JianCallback")
 }
 
 /**
@@ -25,11 +25,11 @@ public func JianOption<T>(default!: T, short!: ?Rune = None, help!: String = "",
  */
 public func JianArgument<T>(help!: String = "", hidden!: Bool = false): T {
     let _ = (help, hidden)
-    throw IllegalArgumentException("JianArgument must be a parameter default in @JianCommand or @JianCallback")
+    throw IllegalArgumentException("JianArgument must be a function parameter default in @JianCommand or @JianCallback")
 }
 
 /** Declares a positional argument with a lazy default expression; throws if evaluated. */
 public func JianArgument<T>(default!: T, help!: String = "", hidden!: Bool = false): T {
     let _ = (default, help, hidden)
-    throw IllegalArgumentException("JianArgument must be a parameter default in @JianCommand or @JianCallback")
+    throw IllegalArgumentException("JianArgument must be a function parameter default in @JianCommand or @JianCallback")
 }

@@ -20,6 +20,12 @@ command if `cjpm` is not already available.
 
 `cjpm` leaves `*.cj.macrocall` and `lib-macro_*.dylib` next to the sources: untracked build output.
 
+## Terminology
+
+Use "arguments and options" for CLI inputs. Reserve "parameter" for function
+signatures and type parameters. Runtime metadata uses `JianInputSpec`,
+`JianInputKind` and `JianCommandSpec.inputs` for arguments and options together.
+
 ## Public API naming
 
 Framework-owned public types and macros use the `Jian` prefix, including
@@ -34,7 +40,7 @@ Generated adapter names come from the user's function (`GreetCommand`,
 
 Each macro is declared twice, attributed (`@JianCommand[help: ...]`) and plain (`@JianCommand`): cjc rejects the plain form of a macro declared only with `attrs`.
 
-Short option names are single ASCII bytes: `JianParamSpec.short` is `?Byte`,
+Short option names are single ASCII bytes: `JianInputSpec.short` is `?Byte`,
 `JianArg.Short` carries one `Byte`, and `JianArgCursor` takes `Array<Byte>` for shorts
 requiring values. The cursor splits short clusters. `JianOption(short: 'v')`
 rejects non-ASCII short names at compile time; `-h` is reserved for help.
@@ -43,10 +49,10 @@ rejects non-ASCII short names at compile time; `-h` is reserved for help.
 `@JianCommand` and `@JianCallback`. Cangjie requires `!` on parameters with defaults,
 including `path!: String = JianArgument(...)`; the marker makes it positional in
 the CLI while direct function calls remain named. Keep function-call naming
-separate from CLI parameter kind. Without a marker, `!` determines CLI kind.
+separate from CLI input kind. Without a marker, `!` determines CLI kind.
 Without an explicit default, only optional standard types (`?T`) allow absence;
 Bool and Array require an occurrence or an explicit default. See
-[Parameter declarations](docs/parameters.md).
+[Arguments and options](docs/arguments-and-options.md).
 
 ## Tests
 

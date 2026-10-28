@@ -24,7 +24,7 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
     let marker = reference.identifier.value
     if (marker != "JianOption" && marker != "JianArgument") { return settings }
     if (!reference.typeArguments.isEmpty()) {
-        throw ASTException("${marker} takes its type from the parameter declaration")
+        throw ASTException("${marker} takes its type from the function parameter declaration")
     }
     settings.marker = marker
     var seen = ""

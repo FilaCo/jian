@@ -12,17 +12,17 @@ public struct JianCommandSpec {
          */
         public let help!: String = "",
         /**
-         * The parameters, in declaration order.
+         * Arguments and options, in declaration order.
          */
-        public let params!: Array<JianParamSpec> = []
+        public let inputs!: Array<JianInputSpec> = []
     ) {}
 }
 
 /**
- * How a parameter appears on the command line.
+ * Whether a CLI input is a positional argument, value option or flag.
  */
 @Derive[Equatable, ToString]
-public enum JianParamKind {
+public enum JianInputKind {
     /**
      * `NAME`, by position.
      */
@@ -38,15 +38,15 @@ public enum JianParamKind {
 }
 
 /**
- * Parameter metadata used to render help and usage.
+ * Argument or option metadata used to render help and usage.
  */
-public struct JianParamSpec {
-    public JianParamSpec(
+public struct JianInputSpec {
+    public JianInputSpec(
         /**
          * The CLI name in kebab case without dashes, e.g. `dry-run`.
          */
         public let name: String,
-        public let kind!: JianParamKind,
+        public let kind!: JianInputKind,
         /**
          * The placeholder for the value, e.g. `INT` or `INT...`; empty for a flag.
          */
@@ -56,7 +56,7 @@ public struct JianParamSpec {
          */
         public let short!: ?Byte = None,
         /**
-         * The text beside the parameter in help; empty for none.
+         * The text beside the argument or option in help; empty for none.
          */
         public let help!: String = "",
         /**

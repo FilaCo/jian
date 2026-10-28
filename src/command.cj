@@ -87,12 +87,12 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let cli = cliName(identifier.value.replace("`", ""))
         if (names.contains(cli)) {
             diagReport(DiagReportLevel.ERROR, quote($(identifier)),
-                "duplicate CLI parameter name '--${cli}'", "use distinct names after kebab-case conversion")
+                "duplicate CLI input name '--${cli}'", "use distinct names after kebab-case conversion")
             return input
         }
         if (cli == "help") {
             diagReport(DiagReportLevel.ERROR, quote($(identifier)),
-                "parameter name '--help' is reserved", "choose another parameter name")
+                "option name '--help' is reserved", "choose another parameter name")
             return input
         }
         names = names.concat([cli])
@@ -131,8 +131,8 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             for (later in index + 1..declaration.funcParams.size) {
                 if (!isNamedCLI(declaration.funcParams[later])) {
                     diagReport(DiagReportLevel.ERROR, typeName,
-                        "variadic Array parameter must be the last positional parameter",
-                        "move this parameter after all other positional parameters")
+                        "variadic Array argument must be the last positional argument",
+                        "move this argument after all other positional arguments")
                     return input
                 }
             }
@@ -155,18 +155,18 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
                 if (__jian_short == UInt8($(byte))) { __jian_name = $(cliLiteral); }
             )
         }
-        let paramHelp = settings.help
+        let inputHelp = settings.help
         let hidden = settings.hidden
         let kind = if (named) {
-            quote(if (jianTakesValueAs<$(typeName)>()) { JianParamKind.ValueOption } else { JianParamKind.Flag })
-        } else { quote(JianParamKind.Positional) }
+            quote(if (jianTakesValueAs<$(typeName)>()) { JianInputKind.ValueOption } else { JianInputKind.Flag })
+        } else { quote(JianInputKind.Positional) }
         let shown = if (hasDefault) {
             let text = Token(TokenKind.STRING_LITERAL, parameter.expr.toTokens().toString())
             quote(Some($(text)))
         } else { quote(None) }
         let required = if (hasDefault) { quote(false) } else { quote(jianWhenAbsentAs<$(typeName)>().isNone()) }
-        specs += quote(JianParamSpec($(cliLiteral), kind: $(kind), metavar: jianMetavarAs<$(typeName)>(),
-            short: $(short), help: $(paramHelp), hidden: $(hidden), defaultShown: $(shown), required: $(required), repeatable: $(repeatable)),)
+        specs += quote(JianInputSpec($(cliLiteral), kind: $(kind), metavar: jianMetavarAs<$(typeName)>(),
+            short: $(short), help: $(inputHelp), hidden: $(hidden), defaultShown: $(shown), required: $(required), repeatable: $(repeatable)),)
         storage += quote(var $(slot): Option<$(typeName)> = None;)
         if (named) {
             options += quote(
@@ -217,7 +217,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     declaration.toTokens() + quote(
         public class $(className) <: $(interfaceName) {
             $(commandName)
-            public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), params: [$(specs)]) } }
+            public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)]) } }
             public func run(__jian_args: JianArgCursor): Int64 {
                 $(storage)
                 var __jian_position = 0

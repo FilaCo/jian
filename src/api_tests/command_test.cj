@@ -95,9 +95,9 @@ class CommandMacroTest {
         // assert
         @Expect(code, 3)
         @Expect(observed, "out:[first, second, --third]:true")
-        @Expect(command.spec.params[1].repeatable, true)
-        @Expect(command.spec.params[1].required, false)
-        @Expect(command.spec.params[1].metavar, "PATH...")
+        @Expect(command.spec.inputs[1].repeatable, true)
+        @Expect(command.spec.inputs[1].required, false)
+        @Expect(command.spec.inputs[1].metavar, "PATH...")
         @Expect(command.run(JianArgCursor(["out"])), 0)
         @Expect(observed, "out:[]:false")
     }
@@ -131,11 +131,11 @@ class CommandMacroTest {
         @Expect(observed, "Alice")
         @Expect(command.name, "greet-user")
         @Expect(command.spec.help, "A greeting")
-        @Expect(command.spec.params[0].kind, JianParamKind.Positional)
-        @Expect(command.spec.params[0].metavar, "TEXT")
-        @Expect(command.spec.params[0].required, true)
-        @Expect(command.spec.params[1].defaultShown, Some("2"))
-        @Expect(command.spec.params[1].required, false)
+        @Expect(command.spec.inputs[0].kind, JianInputKind.Positional)
+        @Expect(command.spec.inputs[0].metavar, "TEXT")
+        @Expect(command.spec.inputs[0].required, true)
+        @Expect(command.spec.inputs[1].defaultShown, Some("2"))
+        @Expect(command.spec.inputs[1].required, false)
         @Expect(command.run(JianArgCursor(["Bob"])), 2)
     }
 
@@ -164,10 +164,10 @@ class CommandMacroTest {
 
         // assert
         @Expect(observed, "false:-1")
-        @Expect(command.spec.params[0].kind, JianParamKind.Flag)
-        @Expect(command.spec.params[0].required, false)
-        @Expect(command.spec.params[1].metavar, "INT")
-        @Expect(command.spec.params[1].required, false)
+        @Expect(command.spec.inputs[0].kind, JianInputKind.Flag)
+        @Expect(command.spec.inputs[0].required, false)
+        @Expect(command.spec.inputs[1].metavar, "INT")
+        @Expect(command.spec.inputs[1].required, false)
         command.run(JianArgCursor(["--loud", "--jobs", "3"]))
         @Expect(observed, "true:3")
     }
@@ -183,8 +183,8 @@ class CommandMacroTest {
         // assert
         @Expect(code, 2)
         @Expect(observed, "[a, b]")
-        @Expect(command.spec.params[0].repeatable, true)
-        @Expect(command.spec.params[0].metavar, "TEXT...")
+        @Expect(command.spec.inputs[0].repeatable, true)
+        @Expect(command.spec.inputs[0].metavar, "TEXT...")
         @Expect(command.run(JianArgCursor([])), 0)
     }
 
@@ -199,7 +199,7 @@ class CommandMacroTest {
         let explicitCode = command.run(JianArgCursor(["--value=given"]))
 
         // assert
-        @Expect((metadata.params[0].defaultShown ?? "").replace(" ", ""), "dynamicDefault()")
+        @Expect((metadata.inputs[0].defaultShown ?? "").replace(" ", ""), "dynamicDefault()")
         @Expect(defaultCalls, 0)
         @Expect(explicitCode, 0)
         command.run(JianArgCursor([]))
@@ -234,14 +234,14 @@ class CommandMacroTest {
         // assert
         @Expect(code, 6)
         @Expect(command.run(JianArgCursor([])), -1)
-        @Expect(command.spec.params[0].kind, JianParamKind.Flag)
+        @Expect(command.spec.inputs[0].kind, JianInputKind.Flag)
         @Expect(InferredCommand().run(JianArgCursor([])), 9)
         @Expect(TextDefaultCommand().run(JianArgCursor([])), 5)
-        @Expect(TextDefaultCommand().spec.params[0].defaultShown, Some("\"hello\""))
+        @Expect(TextDefaultCommand().spec.inputs[0].defaultShown, Some("\"hello\""))
     }
 
     @TestCase
-    func malformedArgumentsReportUsageErrorsWithParameterContext() {
+    func malformedArgumentsReportUsageErrorsWithInputContext() {
         // arrange
         let command = Greet_userCommand()
 

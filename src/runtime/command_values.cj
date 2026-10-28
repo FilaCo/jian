@@ -11,16 +11,16 @@ public func jianExitCode(_: Unit): Int64 { 0 }
 public func jianExitCode(value: Int64): Int64 { value }
 
 /**
- * Resolves value consumption through the declared parameter type, including aliases.
+ * Resolves value consumption through the declared function parameter type, including aliases.
  */
 public func jianTakesValueAs<T>(): Bool where T <: JianArgValue<T> { T.takesValue() }
 
 /**
- * Resolves the help placeholder through the declared parameter type.
+ * Resolves the help placeholder through the declared function parameter type.
  */
 public func jianMetavarAs<T>(): String where T <: JianArgValue<T> { T.metavar() }
 
 /**
- * Returns the type's implicit default; outer None denotes a required parameter.
+ * Returns the type's implicit default; outer None denotes a required argument or option.
  */
 public func jianWhenAbsentAs<T>(): ?T where T <: JianArgValue<T> { T.whenAbsent() }

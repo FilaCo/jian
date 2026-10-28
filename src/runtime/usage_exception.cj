@@ -16,7 +16,7 @@ public class JianUsageException <: Exception {
     }
 
     /**
-     * A required parameter or an option's value is absent; `name` is e.g. `NAME` or `--times`.
+     * A required argument, option or option value is absent; `name` is e.g. `NAME` or `--times`.
      */
     public static func missingArgument(name: String): JianUsageException {
         JianUsageException("missing argument '${name}'")

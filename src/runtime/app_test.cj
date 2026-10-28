@@ -90,7 +90,7 @@ class AppTest {
     func shortValueOptionsAreConfiguredForCallbacksAndCommands() {
         // arrange
         let values = ArrayList<String>()
-        let spec = JianCommandSpec(params: [JianParamSpec("number", kind: JianParamKind.ValueOption, short: b'n')])
+        let spec = JianCommandSpec(inputs: [JianInputSpec("number", kind: JianInputKind.ValueOption, short: b'n')])
         let app = JianApp(name: "demo")
             .callback(TestCallback({ args =>
                 @Expect(args.next(), Some(JianArg.Short(b'n', "42")))

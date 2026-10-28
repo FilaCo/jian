@@ -1,4 +1,4 @@
-// expect-error: JianOption takes its type from the parameter declaration
+// expect-error: JianOption takes its type from the function parameter declaration
 package fixture
 
 import jian.*

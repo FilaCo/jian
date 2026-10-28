@@ -124,9 +124,9 @@ public class JianApp {
 
 private func valueShorts(spec: JianCommandSpec): Array<Byte> {
     let shorts = ArrayList<Byte>()
-    for (param in spec.params) {
-        if (param.kind == JianParamKind.ValueOption) {
-            if (let Some(value) <- param.short) {
+    for (input in spec.inputs) {
+        if (input.kind == JianInputKind.ValueOption) {
+            if (let Some(value) <- input.short) {
                 shorts.add(value)
             }
         }

@@ -1,7 +1,7 @@
 package jian.runtime
 
 /**
- * A conversion failure without a parameter name.
+ * A conversion failure without an argument or option name.
  * The command parser adds that context with JianUsageException.invalidValue.
  */
 public class JianInvalidValueException <: Exception {

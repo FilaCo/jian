@@ -25,7 +25,7 @@ public interface JianArgValue<T> {
     static func accept(prev: ?T, raw: ?String): T
 
     /**
-     * Value when omitted; outer `None` means the parameter is required.
+     * Value when omitted; outer `None` means the argument or option is required.
      */
     static func whenAbsent(): ?T
 }

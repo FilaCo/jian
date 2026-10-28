@@ -60,9 +60,9 @@ class CallbackMacroTest {
         @Expect(callbackEvents, "callback:true:3:2;command:true;")
         @Expect(errors.bytes().size, 0)
         @Expect(ConfigureCallback().spec.help, "Global settings")
-        @Expect(ConfigureCallback().spec.params[0].kind, JianParamKind.Flag)
-        @Expect(ConfigureCallback().spec.params[1].metavar, "INT")
-        @Expect(ConfigureCallback().spec.params[2].repeatable, true)
+        @Expect(ConfigureCallback().spec.inputs[0].kind, JianInputKind.Flag)
+        @Expect(ConfigureCallback().spec.inputs[1].metavar, "INT")
+        @Expect(ConfigureCallback().spec.inputs[2].repeatable, true)
     }
 
     @TestCase
@@ -106,7 +106,7 @@ class CallbackMacroTest {
         let explicit = callback.run(JianArgCursor(["--first=given"]))
 
         // assert
-        @Expect(metadata.params[0].defaultShown.isSome(), true)
+        @Expect(metadata.inputs[0].defaultShown.isSome(), true)
         @Expect(callbackDefaultCalls, 0)
         @Expect(explicit, 0)
         @Expect(callbackEvents, "private:given")
@@ -130,7 +130,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func positionalCallbackParametersLeaveTheNextOperandForDispatch() {
+    func positionalCallbackArgumentsLeaveTheNextOperandForDispatch() {
         // arrange
         let args = JianArgCursor(["project", "--count=2", "launch", "--verbose"])
 

@@ -5,8 +5,8 @@ import std.ast.*
 /**
  * Generates a typed app-level adapter that runs before a subcommand.
  * A function `configure` produces `ConfigureCallback`, registered with `JianApp.callback`.
- * Parses declared positional parameters and options, stopping before the command name.
- * Supports the same parameter types, defaults and `help` setting as `@JianCommand`.
+ * Parses declared positional arguments and options, stopping before the command name.
+ * Supports the same value types, defaults and `help` setting as `@JianCommand`.
  */
 public macro JianCallback(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input, callback: true)

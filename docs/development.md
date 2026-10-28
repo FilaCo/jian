@@ -69,5 +69,5 @@ cog check origin/master..HEAD
 `cog.toml` configures version tags, changelog links and updating the manifest's
 version for an explicitly requested bump. Release publishing is separate.
 
-Parameter declaration syntax and default behavior are described in
-[Parameter declarations](parameters.md).
+Argument and option syntax and default behavior are described in
+[Arguments and options](arguments-and-options.md).

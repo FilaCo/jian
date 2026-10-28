@@ -1,4 +1,4 @@
-// expect-error: duplicate CLI parameter name '--sync-all'
+// expect-error: duplicate CLI input name '--sync-all'
 package fixture
 
 import jian.*

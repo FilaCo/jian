@@ -223,7 +223,7 @@ class ArgValueTest {
     }
 
     @TestCase
-    func conversionErrorsGainParameterContextAtTheCommandBoundary() {
+    func conversionErrorsGainInputContextAtTheCommandBoundary() {
         // arrange
         let conversion = JianInvalidValueException("oops", "Int64")
 
