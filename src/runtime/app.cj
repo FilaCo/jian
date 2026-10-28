@@ -85,13 +85,13 @@ public class JianApp {
             let commandName = match (args.next()) {
                 case Some(JianArg.Operand(value)) => value
                 case Some(JianArg.Long(value)) =>
-                    throw JianUsageException.unknownOption("--" + value)
+                    throw JianUsageException.unknownOption("--${value}")
                 case Some(JianArg.Long(value, _)) =>
-                    throw JianUsageException.unknownOption("--" + value)
+                    throw JianUsageException.unknownOption("--${value}")
                 case Some(JianArg.Short(value)) =>
-                    throw JianUsageException.unknownOption("-" + String.fromUtf8([value]))
+                    throw JianUsageException.unknownOption("-${String.fromUtf8([value])}")
                 case Some(JianArg.Short(value, _)) =>
-                    throw JianUsageException.unknownOption("-" + String.fromUtf8([value]))
+                    throw JianUsageException.unknownOption("-${String.fromUtf8([value])}")
                 case None =>
                     if (appCallback.isSome() && commands.isEmpty() && apps.isEmpty()) {
                         return 0
@@ -101,7 +101,7 @@ public class JianApp {
             for (command in commands) {
                 if (command.name == commandName) {
                     let commandSpec = command.spec
-                    let commandPath = path + " " + commandName
+                    let commandPath = "${path} ${commandName}"
                     usage = usageLine(commandPath, commandSpec)
                     let remaining = args.remaining()
                     if (requestsHelp(remaining, commandSpec)) {
@@ -115,12 +115,12 @@ public class JianApp {
             for (app in apps) {
                 if (app.name == commandName) {
                     // Nested help and failures use the full invocation and the root's streams.
-                    return app.dispatch(args.remaining(), path + " " + commandName, output, errors)
+                    return app.dispatch(args.remaining(), "${path} ${commandName}", output, errors)
                 }
             }
             throw JianUsageException("unknown command '${commandName}'")
         } catch (error: JianUsageException) {
-            errors.write(("Error: ${error.message}\n" + usage).toArray())
+            errors.write("Error: ${error.message}\n${usage}".toArray())
             errors.flush()
             2
         }
@@ -128,8 +128,8 @@ public class JianApp {
 
     private func appHelp(path: String, spec: JianCommandSpec, hasCommands: Bool): String {
         var text = usageLine(path, spec, commands: hasCommands)
-        if (!help.isEmpty()) { text += "\n" + help + "\n" }
-        if (!spec.help.isEmpty()) { text += "\n" + spec.help + "\n" }
+        if (!help.isEmpty()) { text += "\n${help}\n" }
+        if (!spec.help.isEmpty()) { text += "\n${spec.help}\n" }
         text += parameterHelp(spec)
         let names = commands.toArray().map({ command => command.name }).concat(apps.toArray().map({ app => app.name }))
         sort(names)

@@ -5,15 +5,16 @@ func usageLine(path: String, spec: JianCommandSpec, commands!: Bool = false): St
     for (param in spec.inputs) {
         if (param.kind == JianInputKind.Positional && !param.hidden) {
             let label = positionalLabel(param)
-            text += " " + if (param.required) { label } else { "[${label}]" }
+            text += if (param.required) { " ${label}" } else { " [${label}]" }
         }
     }
     if (commands) { text += " COMMAND [ARGS]..." }
-    text + "\n"
+    "${text}\n"
 }
 
 func positionalLabel(param: JianInputSpec): String {
-    param.name.toAsciiUpper() + if (param.repeatable) { "..." } else { "" }
+    let suffix = if (param.repeatable) { "..." } else { "" }
+    "${param.name.toAsciiUpper()}${suffix}"
 }
 
 func parameterHelp(spec: JianCommandSpec): String {
@@ -33,28 +34,31 @@ func parameterHelp(spec: JianCommandSpec): String {
         if (param.kind == JianInputKind.Positional) {
             arguments += helpRow(positionalLabel(param), description)
         } else {
-            var label = "--" + param.name
+            var label = "--${param.name}"
             if (let Some(short) <- param.short) {
-                label = "-" + String.fromUtf8([short]) + ", " + label
+                label = "-${String.fromUtf8([short])}, ${label}"
             }
             if (param.kind == JianInputKind.ValueOption && !param.metavar.isEmpty()) {
-                label += " " + param.metavar
+                label += " ${param.metavar}"
             }
             options += helpRow(label, description)
         }
     }
-    var text = if (arguments.isEmpty()) { "" } else { "\nArguments:\n" + arguments }
-    text += "\nOptions:\n" + options + helpRow("-h, --help", "Show this message and exit.")
+    var text = if (arguments.isEmpty()) { "" } else { "\nArguments:\n${arguments}" }
+    let helpOption = helpRow("-h, --help", "Show this message and exit.")
+    text += "\nOptions:\n${options}${helpOption}"
     text
 }
 
 func helpRow(label: String, description: String): String {
-    "  " + label + if (description.isEmpty()) { "\n" } else { "  " + description + "\n" }
+    if (description.isEmpty()) { "  ${label}\n" } else { "  ${label}  ${description}\n" }
 }
 
 func commandHelp(path: String, spec: JianCommandSpec): String {
-    usageLine(path, spec) + if (spec.help.isEmpty()) { "" } else { "\n" + spec.help + "\n" } +
-        parameterHelp(spec)
+    let usage = usageLine(path, spec)
+    let description = if (spec.help.isEmpty()) { "" } else { "\n${spec.help}\n" }
+    let parameters = parameterHelp(spec)
+    "${usage}${description}${parameters}"
 }
 
 // Scan with the same cursor rules as parsing: option values and operands after
@@ -71,7 +75,7 @@ func requestsHelp(argv: Array<String>, spec: JianCommandSpec, app!: Bool = false
                 for (param in spec.inputs) {
                     if (param.kind != JianInputKind.Positional && param.name == name) {
                         known = true
-                        if (param.kind == JianInputKind.ValueOption) { args.nextValue("--" + name) }
+                        if (param.kind == JianInputKind.ValueOption) { args.nextValue("--${name}") }
                         break
                     }
                 }
