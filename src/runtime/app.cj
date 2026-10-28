@@ -5,7 +5,9 @@ import std.env.{getStdErr, getStdOut}
 import std.io.OutputStream
 import std.sort.sort
 
-/** Context type for apps without injected dependencies; an alias for Unit. */
+/**
+ * Context type for apps without injected dependencies; an alias for Unit.
+ */
 public type JianNoContext = Unit
 
 /**
@@ -21,30 +23,40 @@ public class JianApp<C> {
         private let stderr!: OutputStream = getStdErr(),
         private let stdout!: OutputStream = getStdOut()) {}
 
-    /** Registers a typed command; duplicate names throw IllegalArgumentException. */
+    /**
+     * Registers a typed command; duplicate names throw IllegalArgumentException.
+     */
     public func add(command: JianContextCommand<C>): JianApp<C> {
         requireAvailable(command.name)
         commands.add(command)
         this
     }
 
-    /** Registers an ordinary command, which ignores the context. */
+    /**
+     * Registers an ordinary command, which ignores the context.
+     */
     public func add(command: JianCommand): JianApp<C> { add(PlainCommand<C>(command)) }
 
-    /** Registers a sub-app of the same context type; duplicate names throw IllegalArgumentException. */
+    /**
+     * Registers a sub-app of the same context type; duplicate names throw IllegalArgumentException.
+     */
     public func add(app: JianApp<C>): JianApp<C> {
         requireAvailable(app.name)
         apps.add(app)
         this
     }
 
-    /** Replaces the callback that consumes app inputs before command dispatch. */
+    /**
+     * Replaces the callback that consumes app inputs before command dispatch.
+     */
     public func callback(value: JianContextCallback<C>): JianApp<C> {
         appCallback = Some(value)
         this
     }
 
-    /** Sets an ordinary callback, which ignores the context. */
+    /**
+     * Sets an ordinary callback, which ignores the context.
+     */
     public func callback(value: JianCallback): JianApp<C> { callback(PlainCallback<C>(value)) }
 
     /**
@@ -156,9 +168,13 @@ public class JianApp<C> {
     }
 }
 
-/** Context-free apps can run without explicitly supplying context. */
+/**
+ * Context-free apps can run without explicitly supplying context.
+ */
 extend JianApp<JianNoContext> {
-    /** Runs argv excluding the executable name; help, errors and exit codes follow JianApp.run. */
+    /**
+     * Runs argv excluding the executable name; help, errors and exit codes follow JianApp.run.
+     */
     public func run(argv: Array<String>): Int64 { run(argv, context: ()) }
 }
 
