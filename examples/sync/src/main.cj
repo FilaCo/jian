@@ -16,5 +16,5 @@ func sync(
 }
 
 main(args: Array<String>): Int64 {
-    JianApp<Unit>(name: "demo").add(SyncCommand()).run(args)
+    JianApp<JianNoContext>(name: "demo").add(SyncCommand()).run(args)
 }

@@ -5,8 +5,11 @@ import std.env.{getStdErr, getStdOut}
 import std.io.OutputStream
 import std.sort.sort
 
+/** Context type for apps without injected dependencies; an alias for Unit. */
+public type JianNoContext = Unit
+
 /**
- * A command tree sharing one concrete context type; use JianApp<Unit> without context injection.
+ * A command tree sharing one concrete context type; use JianApp<JianNoContext> without injection.
  * Supply context on each run. Nested apps inherit that run's context and root output streams.
  */
 public class JianApp<C> {
@@ -153,8 +156,8 @@ public class JianApp<C> {
     }
 }
 
-/** Context-free apps can run without explicitly supplying Unit. */
-extend JianApp<Unit> {
+/** Context-free apps can run without explicitly supplying context. */
+extend JianApp<JianNoContext> {
     /** Runs argv excluding the executable name; help, errors and exit codes follow JianApp.run. */
     public func run(argv: Array<String>): Int64 { run(argv, context: ()) }
 }

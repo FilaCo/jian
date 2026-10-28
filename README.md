@@ -49,7 +49,7 @@ func greet(
 }
 
 main(args: Array<String>): Int64 {
-    JianApp<Unit>(name: "demo", help: "A first jian CLI.")
+    JianApp<JianNoContext>(name: "demo", help: "A first jian CLI.")
         .add(GreetCommand())
         .run(args)
 }
@@ -69,7 +69,8 @@ cjpm run -- greet --help
 
 The macro preserves `greet` as a callable function and generates `GreetCommand()`
 for registration. The command name is `greet`; camelCase and snake_case CLI names
-become kebab-case. Registration is explicit. `JianApp<Unit>.run` takes arguments
+become kebab-case. Registration is explicit. `JianNoContext` is an alias for
+`Unit`, used when the app needs no injected context. `app.run` takes arguments
 excluding the executable name, which is exactly what `main(args)` receives.
 
 ## Parameters become arguments and options
@@ -114,8 +115,8 @@ for optional aliases, direct calls and marker constraints.
 ## Apps, sub-apps and callbacks
 
 Register generated command adapters with `.add(GreetCommand())`. Register a
-nested `JianApp<Unit>` the same way. A function marked `@JianCallback` generates a
-`ConfigureCallback` adapter from `configure`; set it with
+nested `JianApp<JianNoContext>` the same way. A function marked `@JianCallback`
+generates a `ConfigureCallback` adapter from `configure`; set it with
 `.callback(ConfigureCallback())` to parse app-level arguments and options before
 dispatching to a command.
 
@@ -215,8 +216,8 @@ help for a nested target.
 | `JianUsageException` | Print error and usage to stderr, return `2` |
 | Other exception | Propagate to the caller |
 
-Return `app.run(args)` from `main` to preserve these codes for a `JianApp<Unit>`.
-Apps with context use `app.run(args, context: ctx)`. The library never calls
+Return `app.run(args)` from `main` to preserve these codes for an app without
+context. Apps with context use `app.run(args, context: ctx)`. The library never calls
 `exit()`. `JianApp<C>` accepts `stdout` and `stderr` streams for testing.
 
 ## Examples and checks

@@ -85,9 +85,10 @@ adapter exposes the usual `spec` (and command `name`) and implements
 Every sub-app must be a `JianApp<C>` with the same context type, even if
 none of its functions requests a dependency. It receives the context supplied to
 the root run, full command path and root output streams. Sub-apps cannot introduce
-or replace a context. Apps without injection use `JianApp<Unit>` and can call
-`run(argv)` without supplying context. They cannot register adapters requiring
-another context type. A mismatched command, callback or sub-app,
+or replace a context. Apps without injection use `JianApp<JianNoContext>` and
+can call `run(argv)` without supplying context. `JianNoContext` is a public alias
+for `Unit`, so `JianApp<Unit>` is equivalent. These apps cannot register adapters
+requiring another context type. A mismatched command, callback or sub-app,
 a missing dependency implementation, and a `run` call without context fail to
 compile. Multiple context types in one tree are not supported in this version.
 
@@ -109,8 +110,8 @@ Help returns 0. Usage errors return 2 with usage on stderr. Other exceptions
 propagate for both context-bearing and context-free apps.
 
 Existing context-free applications migrate from `JianApp(name: ...)` to
-`JianApp<Unit>(name: ...)`; their `run(argv)` calls stay the same. Applications
-with context use `JianApp<C>(name: ...)` and `run(argv, context: value)`.
+`JianApp<JianNoContext>(name: ...)`; their `run(argv)` calls stay the same.
+Applications with context use `JianApp<C>(name: ...)` and `run(argv, context: value)`.
 
 ## Generated extraction contract
 
