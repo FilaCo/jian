@@ -37,18 +37,20 @@ func cliName(name: String): String {
     result
 }
 
-func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
+func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Tokens {
     let declaration = FuncDecl(input)
     let functionName = declaration.identifier
     let sourceName = functionName.value.replace("`", "")
-    let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + "Command")
+    let suffix = if (callback) { "Callback" } else { "Command" }
+    let interfaceName = Token(TokenKind.IDENTIFIER, suffix)
+    let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
     if (attrs.size != 0) {
         let settings = CallExpr(quote(__jian_settings($(attrs))))
         for (setting in settings.arguments) {
             if (setting.identifier.value != "help") {
-                throw ASTException("unknown Command setting '${setting.identifier.value}'")
+                throw ASTException("unknown ${suffix} setting '${setting.identifier.value}'")
             }
             help = setting.expr.toTokens()
         }
@@ -120,14 +122,24 @@ func commandAdapter(attrs: Tokens, input: Tokens): Tokens {
         if (index > 0) { arguments += quote(,) }
         arguments += if (named) { quote($(identifier): $(identifier)) } else { quote($(identifier)) }
     }
+    let commandName = if (callback) { Tokens() } else { quote(public prop name: String { get() { $(name) } }) }
+    let positionalCount = Token(TokenKind.INTEGER_LITERAL, positional.toString())
+    // Look ahead so the callback leaves the command name and its options for App.
+    let boundary = if (callback) { quote(
+        if (__jian_position >= $(positionalCount)) {
+            if (let Arg.Operand(_) <- __jian_arg) { break }
+        }
+    ) } else { Tokens() }
     input + quote(
-        public class $(className) <: Command {
-            public prop name: String { get() { $(name) } }
+        public class $(className) <: $(interfaceName) {
+            $(commandName)
             public prop spec: CommandSpec { get() { CommandSpec(help: $(help), params: [$(specs)]) } }
             public func run(__jian_args: ArgCursor): Int64 {
                 $(storage)
                 var __jian_position = 0
-                while (let Some(__jian_arg) <- __jian_args.next()) {
+                while (let Some(__jian_arg) <- __jian_args.peek()) {
+                    $(boundary)
+                    __jian_args.next()
                     var __jian_name = ""
                     var __jian_attached: ?String = None
                     match (__jian_arg) {
