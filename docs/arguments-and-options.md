@@ -42,18 +42,33 @@ For the standard supported types:
 This includes flags and arrays. Use `default: false` for a flag that may be
 omitted, and `default: []` for an array that may be empty. An optional flag
 (`?Bool`) distinguishes absence (`None`) from a supplied flag (`Some(true)`).
-Type aliases preserve the underlying type's behavior.
+Type aliases preserve the underlying type's CLI behavior.
 
-The macros replace markers with their actual defaults. Without `default`,
-they remove the default expression altogether. The example above becomes an
-ordinary function with this signature:
+The macros replace markers with their actual defaults. Named function parameters
+written as `?T` or `Option<T>` receive `= None` when no default is supplied.
+This applies with or without a marker, and `default: None` has the same effect.
+Nonoptional parameters without `default` remain required. The example above
+becomes an ordinary function with this signature:
 
 ```cangjie
 func greet(name!: String, times!: Int64 = 1, verbose!: Bool = false): Unit
 ```
 
-A direct call is `greet(name: "Alice", times: 3)`. Only explicit defaults can
-be omitted in direct function calls; the CLI also applies `?T` absence behavior.
+A direct call is `greet(name: "Alice", times: 3)`. Named optional parameters
+can also be omitted in direct calls:
+
+```cangjie
+@JianCommand
+func inspect(value!: ?Int64 = JianOption()) {}
+
+// The generated function has `value!: ?Int64 = None`.
+// Both inspect() and inspect(value: 3) are valid.
+```
+
+Macros run before type resolution and cannot identify optional type aliases.
+For an alias such as `type MaybeInt = ?Int64`, write `default: None` (or a bare
+`= None`) to make it omissible in direct calls. Positional function parameters
+without `!` remain positional and require an argument in direct calls.
 Defaults remain lazy and can refer to earlier parameters or private names.
 Reading a generated command's metadata does not evaluate them. Help metadata
 records the default expression without the marker wrapper.

@@ -51,7 +51,10 @@ including `path!: String = JianArgument(...)`; the marker makes it positional in
 the CLI while direct function calls remain named. Keep function-call naming
 separate from CLI input kind. Without a marker, `!` determines CLI kind.
 Without an explicit default, only optional standard types (`?T`) allow absence;
-Bool and Array require an occurrence or an explicit default. See
+Bool and Array require an occurrence or an explicit default. Named parameters
+spelled `?T` or `Option<T>` receive `= None` for direct calls too. Macros cannot
+resolve aliases; aliases need an explicit `default: None` for direct-call defaults.
+Each marker has one runtime signature with `default!: ?T = None`. See
 [Arguments and options](docs/arguments-and-options.md).
 
 ## Tests

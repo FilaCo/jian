@@ -56,3 +56,15 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
 func isNamedCLI(parameter: FuncParam): Bool {
     parameter.not.kind == TokenKind.NOT && parameterSettings(parameter).marker != "JianArgument"
 }
+
+// Macros run before type resolution, so aliases cannot be classified here.
+func isOptionalSpelling(typeNode: TypeNode): Bool {
+    if (typeNode is PrefixType) { return true }
+    if (let Some(reference) <- (typeNode as RefType)) {
+        return reference.identifier.value == "Option" && reference.typeArguments.size == 1
+    }
+    if (let Some(parenthesized) <- (typeNode as ParenType)) {
+        return isOptionalSpelling(parenthesized.parenthesizedType)
+    }
+    false
+}

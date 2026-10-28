@@ -127,8 +127,72 @@ func markerConfigure(workspace!: String = JianArgument(help: "Workspace"),
 private func unprocessedOption(value!: Int64 = JianOption(help: "Value")): Int64 { value }
 private func unprocessedArgument(value!: String = JianArgument(default: "ignored")): String { value }
 
+@JianCommand
+func optionalDefaults(value!: ?Int64 = JianOption(),
+    operand!: Option<String> = JianArgument(),
+    bare!: ?Bool,
+    next!: Option<Int64>,
+    explicit!: ?Int64 = JianOption(default: None)): Int64 {
+    markerObserved = "${operand ?? "none"}:${bare ?? false}"
+    (value ?? 0) + (next ?? 0) + (explicit ?? 0)
+}
+
+@JianCommand
+func optionalAliasDefault(value!: MarkerMaybeInt = JianOption(default: None)): Int64 {
+    value ?? 0
+}
+
+@JianCallback
+func optionalCallback(value!: ?Int64 = JianOption(),
+    operand!: Option<String> = JianArgument()): Unit {
+    markerObserved = "${value ?? 0}:${operand ?? "none"}"
+}
+
 @Test
 class ArgumentAndOptionBehaviorTest {
+    @TestCase
+    func optionalInputsHaveNoneDefaultsForDirectCallsAndCli() {
+        // arrange
+        let command = OptionalDefaultsCommand()
+
+        // act
+        let direct = optionalDefaults()
+
+        // assert
+        @Expect(direct, 0)
+        @Expect(markerObserved, "none:false")
+        @Expect(optionalDefaults(value: 2, operand: "name", bare: true, next: 3, explicit: 4), 9)
+        @Expect(markerObserved, "name:true")
+        @Expect(command.run(JianArgCursor([])), 0)
+        @Expect(markerObserved, "none:false")
+        @Expect(command.run(JianArgCursor(["text", "--value=2", "--next=3", "--explicit=4", "--bare"])), 9)
+        @Expect(markerObserved, "text:true")
+        for (input in command.spec.inputs) {
+            @Expect(input.required, false)
+            @Expect(input.defaultShown, Some("None"))
+        }
+        @Expect(optionalAliasDefault(), 0)
+        @Expect(optionalAliasDefault(value: 7), 7)
+    }
+
+    @TestCase
+    func callbacksShareImplicitNoneDefaultsWithCommands() {
+        // arrange
+        let callback = OptionalCallbackCallback()
+
+        // act
+        optionalCallback()
+
+        // assert
+        @Expect(markerObserved, "0:none")
+        optionalCallback(value: 5, operand: "direct")
+        @Expect(markerObserved, "5:direct")
+        @Expect(callback.run(JianArgCursor([])), 0)
+        @Expect(markerObserved, "0:none")
+        @Expect(callback.run(JianArgCursor(["cli", "--value=3"])), 0)
+        @Expect(markerObserved, "3:cli")
+    }
+
     @TestCase
     func standardOptionTypeAndStaticMembersWorkWithoutImportAliases() {
         // arrange
@@ -205,11 +269,11 @@ class ArgumentAndOptionBehaviorTest {
             @Expect(input.required, false)
         }
         @Expect(command.spec.inputs[0].defaultShown, None)
-        @Expect(command.spec.inputs[1].defaultShown, None)
+        @Expect(command.spec.inputs[1].defaultShown, Some("None"))
         @Expect(command.spec.inputs[3].defaultShown, Some("None"))
         @Expect(command.run(JianArgCursor(["text", "--value=4", "--fallback=5", "--absent=set"])), 9)
         @Expect(markerObserved, "text:set")
-        @Expect(markerOptional(value: None, operand: None), 3)
+        @Expect(markerOptional(value: None), 3)
     }
 
     @TestCase

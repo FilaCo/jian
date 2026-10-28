@@ -104,10 +104,13 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         if (settings.marker == "JianOption" && !functionNamed) {
             throw ASTException("JianOption requires a named function parameter")
         }
+        let implicitNone = functionNamed && isOptionalSpelling(parameter.paramType)
         if (settings.marker != "") {
             // Marker expressions are declaration syntax, never runtime defaults.
             if (let Some(value) <- settings.defaultValue) {
                 parameter.expr = parseExpr(value)
+            } else if (implicitNone) {
+                parameter.expr = parseExpr(quote(None))
             } else {
                 let original = parameter.toTokens()
                 var plain = Tokens()
@@ -120,6 +123,10 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
                 }
                 declaration.funcParams[index] = FuncParam(plain)
             }
+        }
+        if (implicitNone && parameter.assign.kind != TokenKind.ASSIGN) {
+            parameter.assign = Token(TokenKind.ASSIGN)
+            parameter.expr = parseExpr(quote(None))
         }
         let label = if (named) { optionLabel } else { Token(TokenKind.STRING_LITERAL, cli.toAsciiUpper()) }
         let hasDefault = declaration.funcParams[index].assign.kind == TokenKind.ASSIGN
@@ -161,7 +168,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             quote(if (jianTakesValueAs<$(typeName)>()) { JianInputKind.ValueOption } else { JianInputKind.Flag })
         } else { quote(JianInputKind.Positional) }
         let shown = if (hasDefault) {
-            let text = Token(TokenKind.STRING_LITERAL, parameter.expr.toTokens().toString())
+            let text = Token(TokenKind.STRING_LITERAL, declaration.funcParams[index].expr.toTokens().toString())
             quote(Some($(text)))
         } else { quote(None) }
         let required = if (hasDefault) { quote(false) } else { quote(jianWhenAbsentAs<$(typeName)>().isNone()) }
@@ -199,7 +206,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             )
             positional++
         }
-        let absent = if (hasDefault) { parameter.expr.toTokens() }
+        let absent = if (hasDefault) { declaration.funcParams[index].expr.toTokens() }
             else { quote(jianWhenAbsentAs<$(typeName)>() ?? throw JianUsageException.missingArgument($(label))) }
         // Bind original names in order so defaults retain their lexical dependencies.
         bindings += quote(let $(identifier): $(typeName) = $(slot) ?? ($(absent));)
