@@ -9,7 +9,6 @@ import std.fs.Path
     value<Path>(metavar: "PATH", accept: Path(requiredValue(raw))),
     value<Bool>(
         takesValue: false,
-        whenAbsent: Some(false),
         accept: if (raw.isNone()) { true } else { parseValue<Bool>(raw, "Bool") }
     )
 )
@@ -24,7 +23,6 @@ import std.fs.Path
     value<Array<T>>(
         metavar: T.metavar() + "...",
         takesValue: T.takesValue(),
-        whenAbsent: Some([]),
         // Each occurrence starts a new element; only the outer array accumulates.
         accept: (prev ?? []).concat([T.accept(None, raw)])
     )

@@ -1,5 +1,6 @@
 package jian.runtime
 
+import std.core.Option as Optional
 import std.fs.Path
 import std.math.MaxMinValue
 import std.reflect.TypeInfo
@@ -27,7 +28,7 @@ class ArgValueTest {
         let optionalInts = Array<?Int64>.metavar()
 
         // act
-        let optionalFlagsTakeValue = Option<Bool>.takesValue()
+        let optionalFlagsTakeValue = Optional<Bool>.takesValue()
 
         // assert
         @Expect(optionalInts, "INT...")
@@ -56,7 +57,7 @@ class ArgValueTest {
     @TestCase
     func omittedValuesDistinguishOptionalValuesFromRequiredOnes() {
         // arrange
-        let optional = Option<Int64>.whenAbsent()
+        let optional = Optional<Int64>.whenAbsent()
 
         // act
         let flag = Bool.whenAbsent()
@@ -65,8 +66,8 @@ class ArgValueTest {
 
         // assert
         @Expect(optional, Some(None))
-        @Expect(flag, Some(false))
-        @Expect(array, Some([]))
+        @Expect(flag, None)
+        @Expect(array, None)
         @Expect(integer, None)
         @Expect(String.whenAbsent(), None)
         @Expect(Path.whenAbsent(), None)

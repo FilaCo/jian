@@ -3,7 +3,7 @@ macro package jian
 import std.ast.*
 
 /**
- * Generates a typed CLI adapter beside the unchanged command function.
+ * Generates a typed CLI adapter beside the command function, replacing CLI markers with real defaults.
  */
 public macro Command(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input)
@@ -76,7 +76,6 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     var shorts = Tokens()
     var bindings = Tokens()
     var arguments = Tokens()
-    let metadata = getChildMessages("Param")
     var usedShorts = ""
     var positional = 0
     var names: Array<String> = []
@@ -99,16 +98,38 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         names = names.concat([cli])
         let cliLiteral = Token(TokenKind.STRING_LITERAL, cli)
         let optionLabel = Token(TokenKind.STRING_LITERAL, "--" + cli)
-        let named = parameter.not.kind == TokenKind.NOT
+        let functionNamed = parameter.not.kind == TokenKind.NOT
+        let settings = parameterSettings(parameter)
+        let named = functionNamed && settings.marker != "Argument"
+        if (settings.marker == "Option" && !functionNamed) {
+            throw ASTException("Option requires a named function parameter")
+        }
+        if (settings.marker != "") {
+            // Marker expressions are declaration syntax, never runtime defaults.
+            if (let Some(value) <- settings.defaultValue) {
+                parameter.expr = parseExpr(value)
+            } else {
+                let original = parameter.toTokens()
+                var plain = Tokens()
+                for (token in original) {
+                    if (token.kind == TokenKind.ASSIGN) { break }
+                    plain.append(token)
+                }
+                if (original[original.size - 1].kind == TokenKind.COMMA) {
+                    plain.append(original[original.size - 1])
+                }
+                declaration.funcParams[index] = FuncParam(plain)
+            }
+        }
         let label = if (named) { optionLabel } else { Token(TokenKind.STRING_LITERAL, cli.toAsciiUpper()) }
-        let hasDefault = parameter.assign.kind == TokenKind.ASSIGN
+        let hasDefault = declaration.funcParams[index].assign.kind == TokenKind.ASSIGN
         let repeated = match (parameter.paramType as RefType) {
             case Some(reference) => reference.identifier.value == "Array" && reference.typeArguments.size == 1
             case None => false
         }
         if (repeated && !named) {
             for (later in index + 1..declaration.funcParams.size) {
-                if (declaration.funcParams[later].not.kind != TokenKind.NOT) {
+                if (!isNamedCLI(declaration.funcParams[later])) {
                     diagReport(DiagReportLevel.ERROR, typeName,
                         "variadic Array parameter must be the last positional parameter",
                         "move this parameter after all other positional parameters")
@@ -118,33 +139,24 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         }
         let repeatable = if (repeated) { quote(true) } else { quote(false) }
         var short = quote(None)
-        var paramHelp = quote("")
-        var hidden = quote(false)
-        var markers = 0
-        for (message in metadata) {
-            if (!message.hasItem("param") || message.getString("param") != identifier.value) { continue }
-            markers++
-            if (markers > 1) { throw ASTException("apply @Param only once per parameter") }
-            if (message.hasItem("help")) { paramHelp = message.getTokens("help") }
-            if (message.hasItem("hidden")) { hidden = message.getTokens("hidden") }
-            if (message.hasItem("short")) {
-                if (!named) { throw ASTException("short name requires a named parameter") }
-                let spelling = message.getTokens("short").toString().trimAscii()
-                if (spelling.size != 3 || !spelling.startsWith("'") || !spelling.endsWith("'") ||
-                    spelling.toArray()[1] > 127) {
-                    throw ASTException("short name must be a single ASCII character literal")
-                }
-                let alias = spelling[1..2]
-                if (alias == "h") { throw ASTException("short name '-h' is reserved for help") }
-                if (usedShorts.contains(alias)) { throw ASTException("duplicate short name '-${alias}'") }
-                usedShorts += alias
-                let byte = Token(TokenKind.INTEGER_LITERAL, spelling.toArray()[1].toString())
-                short = quote(Some(UInt8($(byte))))
-                shorts += quote(
-                    if (__jian_short == UInt8($(byte))) { __jian_name = $(cliLiteral); }
-                )
+        if (let Some(shortName) <- settings.short) {
+            let spelling = shortName.toString().trimAscii()
+            if (spelling.size != 3 || !spelling.startsWith("'") || !spelling.endsWith("'") ||
+                spelling.toArray()[1] > 127) {
+                throw ASTException("short name must be a single ASCII character literal")
             }
+            let alias = spelling[1..2]
+            if (alias == "h") { throw ASTException("short name '-h' is reserved for help") }
+            if (usedShorts.contains(alias)) { throw ASTException("duplicate short name '-${alias}'") }
+            usedShorts += alias
+            let byte = Token(TokenKind.INTEGER_LITERAL, spelling.toArray()[1].toString())
+            short = quote(Some(UInt8($(byte))))
+            shorts += quote(
+                if (__jian_short == UInt8($(byte))) { __jian_name = $(cliLiteral); }
+            )
         }
+        let paramHelp = settings.help
+        let hidden = settings.hidden
         let kind = if (named) {
             quote(if (takesValueAs<$(typeName)>()) { ParamKind.ValueOption } else { ParamKind.Flag })
         } else { quote(ParamKind.Positional) }
@@ -192,7 +204,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         // Bind original names in order so defaults retain their lexical dependencies.
         bindings += quote(let $(identifier): $(typeName) = $(slot) ?? ($(absent));)
         if (index > 0) { arguments += quote(,) }
-        arguments += if (named) { quote($(identifier): $(identifier)) } else { quote($(identifier)) }
+        arguments += if (functionNamed) { quote($(identifier): $(identifier)) } else { quote($(identifier)) }
     }
     let commandName = if (callback) { Tokens() } else { quote(public prop name: String { get() { $(name) } }) }
     let positionalCount = Token(TokenKind.INTEGER_LITERAL, positional.toString())
@@ -202,7 +214,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             if (let Arg.Operand(_) <- __jian_arg) { break }
         }
     ) } else { Tokens() }
-    input + quote(
+    declaration.toTokens() + quote(
         public class $(className) <: $(interfaceName) {
             $(commandName)
             public prop spec: CommandSpec { get() { CommandSpec(help: $(help), params: [$(specs)]) } }

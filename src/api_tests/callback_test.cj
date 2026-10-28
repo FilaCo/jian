@@ -15,12 +15,12 @@ private func callbackDefault(): String {
 }
 
 @Callback[help: "Global settings"]
-func configure(verbose!: Bool, jobs!: ?Int64, paths!: Array<String>): Unit {
+func configure(verbose!: Bool = false, jobs!: ?Int64, paths!: Array<String> = []): Unit {
     callbackEvents += "callback:${verbose}:${jobs ?? -1}:${paths.size};"
 }
 
 @Command
-func launch(verbose!: Bool): Int64 {
+func launch(verbose!: Bool = false): Int64 {
     callbackEvents += "command:${verbose};"
     7
 }

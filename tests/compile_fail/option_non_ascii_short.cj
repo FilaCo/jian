@@ -4,4 +4,4 @@ package fixture
 import jian.*
 
 @Command
-func example(@Param[short: 'ab'] value!: Bool) {}
+func example(value!: Bool = Option(short: 'я')) {}

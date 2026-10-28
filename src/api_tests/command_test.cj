@@ -26,12 +26,12 @@ func dependent(first: String, second!: String = privatePrefix + first): Unit {
 }
 
 @Command
-func implicit(loud!: Bool, jobs!: ?Int64): Unit {
+func implicit(loud!: Bool = false, jobs!: ?Int64): Unit {
     observed = "${loud}:${jobs ?? -1}"
 }
 
 @Command
-func collect(paths!: Array<String>): Int64 {
+func collect(paths!: Array<String> = []): Int64 {
     observed = paths.toString()
     paths.size
 }
@@ -57,7 +57,7 @@ type Switch = Bool
 type MaybeJobs = ?Int64
 
 @Command
-func aliases(enabled!: Switch, jobs!: MaybeJobs): Int64 {
+func aliases(enabled!: Switch = false, jobs!: MaybeJobs): Int64 {
     if (enabled) { jobs ?? 0 } else { -1 }
 }
 
@@ -65,13 +65,13 @@ func aliases(enabled!: Switch, jobs!: MaybeJobs): Int64 {
 func camelCase(): Int64 { 8 }
 
 @Command
-func copyFiles(destination: String, files: Array<Path>, verbose!: Bool): Int64 {
+func copyFiles(destination: String, files!: Array<Path> = Argument(default: []), verbose!: Bool = false): Int64 {
     observed = "${destination}:${files}:${verbose}"
     files.size
 }
 
 @Command
-func sumValues(values: Array<Int64>): Int64 {
+func sumValues(values!: Array<Int64> = Argument(default: [])): Int64 {
     var total: Int64 = 0
     for (value in values) { total += value }
     total
@@ -155,7 +155,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func omitted_flags_and_optional_values_use_type_defaults() {
+    func explicit_flag_default_and_optional_values_allow_absence() {
         // arrange
         let command = ImplicitCommand()
 

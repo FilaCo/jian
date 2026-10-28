@@ -28,8 +28,17 @@ Each macro is declared twice, attributed (`@Command[help: ...]`) and plain (`@Co
 
 Short option names are single ASCII bytes: `ParamSpec.short` is `?Byte`,
 `Arg.Short` carries one `Byte`, and `ArgCursor` takes `Array<Byte>` for shorts
-requiring values. The cursor splits short clusters. `@Param` must reject
-non-ASCII short names at compile time when implemented in #15.
+requiring values. The cursor splits short clusters. `Option(short: 'v')`
+rejects non-ASCII short names at compile time; `-h` is reserved for help.
+
+`Option(...)` and `Argument(...)` are parameter-default markers, rewritten by
+`@Command` and `@Callback`. Cangjie requires `!` on parameters with defaults,
+including `path!: String = Argument(...)`; the marker makes it positional in
+the CLI while direct function calls remain named. Keep function-call naming
+separate from CLI parameter kind. Without a marker, `!` determines CLI kind.
+Without an explicit default, only optional standard types (`?T`) allow absence;
+Bool and Array require an occurrence or an explicit default. See
+[Parameter declarations](docs/parameters.md).
 
 ## Tests
 
