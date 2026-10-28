@@ -42,7 +42,7 @@ Bool and Array require an occurrence or an explicit default. See
 
 ## Tests
 
-Unit tests sit beside the code as `*_test.cj` in the same package (`std.unittest`: `@Test`/`@TestCase`, `@Expect`/`@Assert`), cases in `// arrange` / `// act` / `// assert`, named as sentences. Library code never calls `exit()`: it returns or throws, so that dispatch can be tested.
+Unit tests sit beside the code as `*_test.cj` in the same package (`std.unittest`: `@Test`/`@TestCase`, `@Expect`/`@Assert`), cases in `// arrange` / `// act` / `// assert`, named as readable camelCase sentences. Library code never calls `exit()`: it returns or throws, so that dispatch can be tested.
 
 ## Commits
 

@@ -45,7 +45,7 @@ func `empty_callback`() { callbackEvents = "empty" }
 @Test
 class CallbackMacroTest {
     @TestCase
-    func app_runs_typed_callback_before_command_and_keeps_command_options() {
+    func appRunsTypedCallbackBeforeCommandAndKeepsCommandOptions() {
         // arrange
         callbackEvents = ""
         let errors = ByteBuffer()
@@ -66,7 +66,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func options_after_command_do_not_change_callback_defaults() {
+    func optionsAfterCommandDoNotChangeCallbackDefaults() {
         // arrange
         callbackEvents = ""
         let app = App(name: "demo").callback(ConfigureCallback()).add(LaunchCommand())
@@ -80,7 +80,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func callback_only_options_are_rejected_after_the_command() {
+    func callbackOnlyOptionsAreRejectedAfterTheCommand() {
         // arrange
         callbackEvents = ""
         let errors = ByteBuffer()
@@ -96,7 +96,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func defaults_remain_lazy_and_keep_private_and_earlier_parameter_names() {
+    func defaultsRemainLazyAndKeepPrivateAndEarlierParameterNames() {
         // arrange
         callbackDefaultCalls = 0
         let callback = ConfiguredDefaultCallback()
@@ -116,7 +116,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func nonzero_callback_result_prevents_command_dispatch() {
+    func nonzeroCallbackResultPreventsCommandDispatch() {
         // arrange
         callbackEvents = ""
         let app = App(name: "demo").callback(CallbackExitCallback()).add(LaunchCommand())
@@ -130,7 +130,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func positional_callback_parameters_leave_the_next_operand_for_dispatch() {
+    func positionalCallbackParametersLeaveTheNextOperandForDispatch() {
         // arrange
         let args = ArgCursor(["project", "--count=2", "launch", "--verbose"])
 
@@ -145,7 +145,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func empty_callback_leaves_command_and_end_of_options_marker_intact() {
+    func emptyCallbackLeavesCommandAndEndOfOptionsMarkerIntact() {
         // arrange
         let args = ArgCursor(["--", "launch", "--verbose"])
 
@@ -160,7 +160,7 @@ class CallbackMacroTest {
     }
 
     @TestCase
-    func malformed_callback_options_report_the_same_typed_errors_as_commands() {
+    func malformedCallbackOptionsReportTheSameTypedErrorsAsCommands() {
         // arrange
         let callback = CallbackExitCallback()
 

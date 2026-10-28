@@ -85,7 +85,7 @@ func overloaded(value: Int64): Int64 { value }
 @Test
 class CommandMacroTest {
     @TestCase
-    func variadic_paths_collect_remaining_operands_around_named_options() {
+    func variadicPathsCollectRemainingOperandsAroundNamedOptions() {
         // arrange
         let command = CopyFilesCommand()
 
@@ -103,7 +103,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func variadic_elements_keep_their_declared_type_and_report_invalid_values() {
+    func variadicElementsKeepTheirDeclaredTypeAndReportInvalidValues() {
         // arrange
         let command = SumValuesCommand()
 
@@ -119,7 +119,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func generates_metadata_and_typed_positional_and_named_parsing() {
+    func generatesMetadataAndTypedPositionalAndNamedParsing() {
         // arrange
         let command = Greet_userCommand()
 
@@ -140,7 +140,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func defaults_retain_earlier_parameter_and_private_names() {
+    func defaultsRetainEarlierParameterAndPrivateNames() {
         // arrange
         let command = DependentCommand()
 
@@ -155,7 +155,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func explicit_flag_default_and_optional_values_allow_absence() {
+    func explicitFlagDefaultAndOptionalValuesAllowAbsence() {
         // arrange
         let command = ImplicitCommand()
 
@@ -173,7 +173,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func repeated_options_accumulate_in_the_declared_array() {
+    func repeatedOptionsAccumulateInTheDeclaredArray() {
         // arrange
         let command = CollectCommand()
 
@@ -189,7 +189,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func defaults_are_evaluated_only_when_absent_and_help_does_not_run_them() {
+    func defaultsAreEvaluatedOnlyWhenAbsentAndHelpDoesNotRunThem() {
         // arrange
         defaultCalls = 0
         let command = LazyCommand()
@@ -208,7 +208,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func names_preserve_function_spelling_for_classes_and_use_kebab_for_cli() {
+    func namesPreserveFunctionSpellingForClassesAndUseKebabForCli() {
         // arrange
         let quoted = Quoted_nameCommand()
         let camel = CamelCaseCommand()
@@ -224,7 +224,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func aliases_preserve_flag_and_optional_value_behavior() {
+    func aliasesPreserveFlagAndOptionalValueBehavior() {
         // arrange
         let command = AliasesCommand()
 
@@ -241,7 +241,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func malformed_arguments_report_usage_errors_with_parameter_context() {
+    func malformedArgumentsReportUsageErrorsWithParameterContext() {
         // arrange
         let command = Greet_userCommand()
 

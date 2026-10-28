@@ -30,7 +30,7 @@ func paramDefault(count!: Int64 = Option(default: 2)): Int64 { count }
 @Test
 class ParameterMarkerTest {
     @TestCase
-    func carries_parameter_metadata_in_declaration_order() {
+    func carriesParameterMetadataInDeclarationOrder() {
         // arrange
         let command = ParamOptionsCommand()
 
@@ -52,7 +52,7 @@ class ParameterMarkerTest {
     }
 
     @TestCase
-    func parses_flags_and_attached_values_from_short_clusters() {
+    func parsesFlagsAndAttachedValuesFromShortClusters() {
         // arrange
         let app = App(name: "test").add(ParamOptionsCommand())
 
@@ -131,7 +131,7 @@ private func unprocessedArgument(value!: String = Argument(default: "ignored")):
 @Test
 class ParameterBehaviorTest {
     @TestCase
-    func combines_explicit_positionals_with_inferred_parameters_and_short_options() {
+    func combinesExplicitPositionalsWithInferredParametersAndShortOptions() {
         // arrange
         let command = MixedMarkersCommand()
         let app = App(name: "test").add(command)
@@ -151,7 +151,7 @@ class ParameterBehaviorTest {
     }
 
     @TestCase
-    func extracts_lazy_defaults_and_preserves_private_and_earlier_parameter_references() {
+    func extractsLazyDefaultsAndPreservesPrivateAndEarlierParameterReferences() {
         // arrange
         markerDefaultCalls = 0
         let command = MarkerDefaultsCommand()
@@ -177,7 +177,7 @@ class ParameterBehaviorTest {
     }
 
     @TestCase
-    func optional_types_and_explicit_defaults_control_absence_including_aliases() {
+    func optionalTypesAndExplicitDefaultsControlAbsenceIncludingAliases() {
         // arrange
         let command = MarkerOptionalCommand()
 
@@ -199,7 +199,7 @@ class ParameterBehaviorTest {
     }
 
     @TestCase
-    func nonoptional_flags_and_arrays_require_occurrences_without_explicit_defaults() {
+    func nonoptionalFlagsAndArraysRequireOccurrencesWithoutExplicitDefaults() {
         // arrange
         let command = RequiredMarkersCommand()
 
@@ -223,7 +223,7 @@ class ParameterBehaviorTest {
     }
 
     @TestCase
-    func callbacks_parse_marker_positionals_and_short_clusters_before_dispatch() {
+    func callbacksParseMarkerPositionalsAndShortClustersBeforeDispatch() {
         // arrange
         let callback = MarkerConfigureCallback()
         let app = App(name: "test").callback(callback).add(ParamDefaultCommand())
@@ -242,7 +242,7 @@ class ParameterBehaviorTest {
     }
 
     @TestCase
-    func markers_throw_when_evaluated_outside_command_or_callback_defaults() {
+    func markersThrowWhenEvaluatedOutsideCommandOrCallbackDefaults() {
         // arrange
         let expectedOption = "Option must be a parameter default in @Command or @Callback"
         let expectedArgument = "Argument must be a parameter default in @Command or @Callback"
