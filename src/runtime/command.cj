@@ -64,3 +64,15 @@ public interface JianContextCallback<C> {
      */
     func run(args: JianArgCursor, context: C): Int64
 }
+
+/** Selects a command's generated registration overload. */
+public struct JianCommandTag {}
+
+/** Selects a callback's generated registration overload. */
+public struct JianCallbackTag {}
+
+/** Selects a command's registration overload for context C. */
+public struct JianContextCommandTag<C> {}
+
+/** Selects a callback's registration overload for context C. */
+public struct JianContextCallbackTag<C> {}

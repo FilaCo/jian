@@ -21,6 +21,11 @@ public class JianApp {
         core = AppCore<Unit>(help, stderr, stdout)
     }
 
+    /** Registers a function annotated with @JianCommand. */
+    public func add(factory: (JianCommandTag) -> JianCommand): JianApp {
+        add(factory(JianCommandTag()))
+    }
+
     /**
      * Registers a command adapter; duplicate names throw IllegalArgumentException.
      * @JianCommand[app] generates this registration automatically.
@@ -37,6 +42,11 @@ public class JianApp {
     public func add(app: JianApp, name!: String, help!: ?String = None): JianApp {
         core.mount(app.core, name, help ?? app.help, { _: Unit => () })
         this
+    }
+
+    /** Registers a function annotated with @JianCallback. */
+    public func callback(factory: (JianCallbackTag) -> JianCallback): JianApp {
+        callback(factory(JianCallbackTag()))
     }
 
     /**
@@ -70,6 +80,16 @@ public class JianContextApp<C> {
         this.name = name
         this.help = help
         core = AppCore<C>(help, stderr, stdout)
+    }
+
+    /** Registers a function requiring this context, annotated with @JianCommand. */
+    public func add(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
+        add(factory(JianContextCommandTag<C>()))
+    }
+
+    /** Registers a function annotated with @JianCommand that ignores the context. */
+    public func add(factory: (JianCommandTag) -> JianCommand): JianContextApp<C> {
+        add(factory(JianCommandTag()))
     }
 
     /**
@@ -110,6 +130,16 @@ public class JianContextApp<C> {
         context!: (C) -> D): JianContextApp<C> {
         core.mount(app.core, name, help ?? app.help, context)
         this
+    }
+
+    /** Registers a function requiring this context, annotated with @JianCallback. */
+    public func callback(factory: (JianContextCallbackTag<C>) -> JianContextCallback<C>): JianContextApp<C> {
+        callback(factory(JianContextCallbackTag<C>()))
+    }
+
+    /** Registers a function annotated with @JianCallback that ignores the context. */
+    public func callback(factory: (JianCallbackTag) -> JianCallback): JianContextApp<C> {
+        callback(factory(JianCallbackTag()))
     }
 
     /**

@@ -49,13 +49,13 @@ class RegistrationTest {
     }
 
     @TestCase
-    func registeredValuesPreserveDefaultsAndExposeCallableMethods() {
+    func registeredFunctionsPreserveDefaultsAndCanBeUsedAsFunctionValues() {
         // arrange
-        let identity: (Int64) -> Int64 = registeredIdentity.call
+        let identity: (Int64) -> Int64 = registeredIdentity
 
         // act
-        let defaulted = registeredAdd.call(3)
-        let explicit = registeredAdd.call(3, amount: 5)
+        let defaulted = registeredAdd(3)
+        let explicit = registeredAdd(3, amount: 5)
         let fromFunctionValue = identity(9)
 
         // assert

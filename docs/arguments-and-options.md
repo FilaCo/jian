@@ -48,21 +48,21 @@ The macros replace markers with their actual defaults. Named function parameters
 written as `?T` or `Option<T>` receive `= None` when no default is supplied.
 This applies with or without a marker, and `default: None` has the same effect.
 Nonoptional parameters without `default` remain required. The example above
-becomes a command value named `greet` with this method signature:
+retains a function named `greet` with this signature:
 
 ```cangjie
-public func call(name!: String, times!: Int64 = 1, verbose!: Bool = false): Unit
+func greet(name!: String, times!: Int64 = 1, verbose!: Bool = false): Unit
 ```
 
-A direct call is `greet.call(name: "Alice", times: 3)`. Named optional parameters
+A direct call is `greet(name: "Alice", times: 3)`. Named optional parameters
 can also be omitted in direct calls:
 
 ```cangjie
 @JianCommand
 func inspect(value!: ?Int64 = JianOption()) {}
 
-// The call method has `value!: ?Int64 = None`.
-// Both inspect.call() and inspect.call(value: 3) are valid.
+// The function has `value!: ?Int64 = None`.
+// Both inspect() and inspect(value: 3) are valid.
 ```
 
 Macros run before type resolution and cannot identify optional type aliases.

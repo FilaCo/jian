@@ -43,11 +43,11 @@ class MacroIntegrationTest {
         @Expect(code, 4)
         @Expect(integrationEvents, "global:true:3:[a, b];files:[first, second]:true:2;")
         @Expect(errors.bytes().size, 0)
-        @Expect(integrationGlobal.spec.inputs[0].short, Some(b'v'))
-        @Expect(integrationGlobal.spec.inputs[0].help, "Verbose workspace")
-        @Expect(integrationGlobal.spec.inputs[2].hidden, true)
-        @Expect(integrationFiles.spec.inputs[0].repeatable, true)
-        @Expect(integrationFiles.spec.inputs[0].help, "Input paths")
+        @Expect(IntegrationGlobalCallback().spec.inputs[0].short, Some(b'v'))
+        @Expect(IntegrationGlobalCallback().spec.inputs[0].help, "Verbose workspace")
+        @Expect(IntegrationGlobalCallback().spec.inputs[2].hidden, true)
+        @Expect(IntegrationFilesCommand().spec.inputs[0].repeatable, true)
+        @Expect(IntegrationFilesCommand().spec.inputs[0].help, "Input paths")
     }
 
     @TestCase

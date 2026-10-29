@@ -47,17 +47,18 @@ field of that type, and is not implicitly unwrapped or created.
 
 All injections in one function must spell the same context type. An imported
 alias can be used consistently in all markers and app wiring. The command/callback
-value and its generated adapter have the declaration's visibility, so internal functions can use internal
-context types; public functions require publicly accessible signature types.
+function and its generated adapter have the declaration's visibility. Internal
+functions can use internal context types; public functions require publicly
+accessible signature types.
 A command or callback with injection must match its registration app's context.
 Context-free handlers can register in either app type.
 
-The macro removes injection defaults from the `.call` method. Direct calls
+The macro removes injection defaults from the function signature. Direct calls
 therefore supply dependencies explicitly, including optional dependencies:
 
 ```cangjie
-greet.call("Alice", logger: logger)
-configure.call(ctx: context, verbose: true)
+greet("Alice", logger: logger)
+configure(ctx: context, verbose: true)
 ```
 
 Injected parameters create no CLI inputs, parser storage, metadata or help rows.

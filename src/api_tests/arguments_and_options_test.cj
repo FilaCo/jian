@@ -31,7 +31,7 @@ class ArgumentAndOptionMarkerTest {
     @TestCase
     func carriesArgumentAndOptionMetadataInDeclarationOrder() {
         // arrange
-        let command = optionMetadata
+        let command = OptionMetadataCommand()
 
         // act
         let inputs = command.spec.inputs
@@ -44,10 +44,10 @@ class ArgumentAndOptionMarkerTest {
         @Expect(inputs[1].hidden, true)
         @Expect(inputs[2].short, Some(b't'))
         @Expect(inputs[2].help, "Repetitions")
-        @Expect(argumentMetadata.spec.inputs[0].help, "Input path")
-        @Expect(argumentMetadata.spec.inputs[0].hidden, true)
-        @Expect(optionDefault.run(JianArgCursor([])), 2)
-        @Expect(optionDefault.spec.inputs[0].short, None)
+        @Expect(ArgumentMetadataCommand().spec.inputs[0].help, "Input path")
+        @Expect(ArgumentMetadataCommand().spec.inputs[0].hidden, true)
+        @Expect(OptionDefaultCommand().run(JianArgCursor([])), 2)
+        @Expect(OptionDefaultCommand().spec.inputs[0].short, None)
     }
 
     @TestCase
@@ -153,15 +153,15 @@ class ArgumentAndOptionBehaviorTest {
     @TestCase
     func optionalInputsHaveNoneDefaultsForDirectCallsAndCli() {
         // arrange
-        let command = optionalDefaults
+        let command = OptionalDefaultsCommand()
 
         // act
-        let direct = optionalDefaults.call()
+        let direct = optionalDefaults()
 
         // assert
         @Expect(direct, 0)
         @Expect(markerObserved, "none:false")
-        @Expect(optionalDefaults.call(value: 2, operand: "name", bare: true, next: 3, explicit: 4), 9)
+        @Expect(optionalDefaults(value: 2, operand: "name", bare: true, next: 3, explicit: 4), 9)
         @Expect(markerObserved, "name:true")
         @Expect(command.run(JianArgCursor([])), 0)
         @Expect(markerObserved, "none:false")
@@ -171,21 +171,21 @@ class ArgumentAndOptionBehaviorTest {
             @Expect(input.required, false)
             @Expect(input.defaultShown, Some("None"))
         }
-        @Expect(optionalAliasDefault.call(), 0)
-        @Expect(optionalAliasDefault.call(value: 7), 7)
+        @Expect(optionalAliasDefault(), 0)
+        @Expect(optionalAliasDefault(value: 7), 7)
     }
 
     @TestCase
     func callbacksShareImplicitNoneDefaultsWithCommands() {
         // arrange
-        let callback = optionalCallback
+        let callback = OptionalCallbackCallback()
 
         // act
-        optionalCallback.call()
+        optionalCallback()
 
         // assert
         @Expect(markerObserved, "0:none")
-        optionalCallback.call(value: 5, operand: "direct")
+        optionalCallback(value: 5, operand: "direct")
         @Expect(markerObserved, "5:direct")
         @Expect(callback.run(JianArgCursor([])), 0)
         @Expect(markerObserved, "0:none")
@@ -211,7 +211,7 @@ class ArgumentAndOptionBehaviorTest {
     @TestCase
     func combinesExplicitPositionalsWithInferredInputsAndShortOptions() {
         // arrange
-        let command = mixedMarkers
+        let command = MixedMarkersCommand()
         let app = JianApp(name: "test").add(command)
 
         // act
@@ -224,7 +224,7 @@ class ArgumentAndOptionBehaviorTest {
         @Expect(command.spec.inputs[1].required, true)
         @Expect(command.spec.inputs[2].repeatable, true)
         @Expect(command.spec.inputs[2].required, false)
-        @Expect(mixedMarkers.call("direct", name: "name", plain: None), 2)
+        @Expect(mixedMarkers("direct", name: "name", plain: None), 2)
         @Expect(markerObserved, "direct:name:[]:none")
     }
 
@@ -232,7 +232,7 @@ class ArgumentAndOptionBehaviorTest {
     func extractsLazyDefaultsAndPreservesPrivateAndEarlierParameterReferences() {
         // arrange
         markerDefaultCalls = 0
-        let command = markerDefaults
+        let command = MarkerDefaultsCommand()
 
         // act
         let metadata = command.spec
@@ -249,7 +249,7 @@ class ArgumentAndOptionBehaviorTest {
         command.run(JianArgCursor([]))
         @Expect(markerObserved, "private:fallback")
         @Expect(markerDefaultCalls, 1)
-        markerDefaults.call()
+        markerDefaults()
         @Expect(markerObserved, "private:fallback")
         @Expect(markerDefaultCalls, 2)
     }
@@ -257,7 +257,7 @@ class ArgumentAndOptionBehaviorTest {
     @TestCase
     func optionalTypesAndExplicitDefaultsControlAbsenceIncludingAliases() {
         // arrange
-        let command = markerOptional
+        let command = MarkerOptionalCommand()
 
         // act
         let code = command.run(JianArgCursor([]))
@@ -273,19 +273,19 @@ class ArgumentAndOptionBehaviorTest {
         @Expect(command.spec.inputs[3].defaultShown, Some("None"))
         @Expect(command.run(JianArgCursor(["text", "--value=4", "--fallback=5", "--absent=set"])), 9)
         @Expect(markerObserved, "text:set")
-        @Expect(markerOptional.call(value: None), 3)
+        @Expect(markerOptional(value: None), 3)
     }
 
     @TestCase
     func nonoptionalFlagsAndArraysRequireOccurrencesWithoutExplicitDefaults() {
         // arrange
-        let command = requiredMarkers
+        let command = RequiredMarkersCommand()
 
         // act
         let noFlag = @AssertThrows[JianUsageException](command.run(JianArgCursor([])))
         let noPaths = @AssertThrows[JianUsageException](command.run(JianArgCursor(["--flag"])))
-        let noOperand = @AssertThrows[JianUsageException](requiredOperand.run(JianArgCursor([])))
-        let noArray = @AssertThrows[JianUsageException](requiredArray.run(JianArgCursor([])))
+        let noOperand = @AssertThrows[JianUsageException](RequiredOperandCommand().run(JianArgCursor([])))
+        let noArray = @AssertThrows[JianUsageException](RequiredArrayCommand().run(JianArgCursor([])))
 
         // assert
         @Expect(noFlag.message, "missing argument '--flag'")
@@ -295,15 +295,15 @@ class ArgumentAndOptionBehaviorTest {
         @Expect(command.spec.inputs[0].required, true)
         @Expect(command.spec.inputs[1].required, true)
         @Expect(command.run(JianArgCursor(["--flag", "--paths=a", "--paths=b"])), 2)
-        @Expect(requiredOperand.run(JianArgCursor(["name"])), 4)
-        @Expect(requiredArray.run(JianArgCursor(["1", "2"])), 2)
-        @Expect(requiredOperand.call(value: "direct"), 6)
+        @Expect(RequiredOperandCommand().run(JianArgCursor(["name"])), 4)
+        @Expect(RequiredArrayCommand().run(JianArgCursor(["1", "2"])), 2)
+        @Expect(requiredOperand(value: "direct"), 6)
     }
 
     @TestCase
     func callbacksParseMarkerPositionalsAndShortClustersBeforeDispatch() {
         // arrange
-        let callback = markerConfigure
+        let callback = MarkerConfigureCallback()
         let app = JianApp(name: "test").callback(callback).add(optionDefault)
 
         // act
@@ -315,7 +315,7 @@ class ArgumentAndOptionBehaviorTest {
         @Expect(callback.spec.inputs[0].kind, JianInputKind.Positional)
         @Expect(callback.spec.inputs[0].help, "Workspace")
         @Expect(callback.spec.inputs[1].short, Some(b'v'))
-        markerConfigure.call(workspace: "direct")
+        markerConfigure(workspace: "direct")
         @Expect(markerObserved, "direct:false:1")
     }
 

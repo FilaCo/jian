@@ -65,8 +65,8 @@ cjpm run -- --help
 cjpm run -- greet --help
 ```
 
-The macro creates a typed command value named `greet`; `.add(greet)` registers it.
-Call `greet.call(name: "Alice", times: 2)` directly without CLI parsing. The method
+The macro preserves the function `greet`; `.add(greet)` registers its CLI adapter.
+Call `greet(name: "Alice", times: 2)` directly without CLI parsing. The function
 keeps the declared parameter types and defaults. The command name is `greet`;
 camelCase and snake_case CLI names become kebab-case. `JianApp` needs no context;
 `JianContextApp<C>` receives typed dependencies. `app.run` takes arguments
@@ -277,7 +277,8 @@ example. The repository's `pre-push` hook runs the same suite.
 - Help is explicit (`help:`); doc comments are not extracted.
 - Generic command and callback functions are rejected. Written return types must
   be `Unit` or `Int64`; inferred return types must satisfy the same runtime contract.
-- A variadic argument must be the final positional argument. A command value cannot share its name with a
-  function overload or another declaration.
+- A variadic argument must be the final positional argument. Only one overload of
+  a given function name can carry each command or callback macro, because generated
+  adapter names come from the function name.
 - Optional type aliases keep their CLI behavior, but need an explicit `None`
   default to make named parameters omissible in direct function calls.

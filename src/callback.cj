@@ -3,9 +3,9 @@ macro package jian
 import std.ast.*
 
 /**
- * Generates a typed callback value with a call method and app-level CLI parsing.
+ * Preserves the function and generates a typed adapter for app-level CLI parsing.
  * An optional positional app registers the callback; a second callback is rejected.
- * Without an app, attach the value explicitly with app.callback(configure).
+ * Without an app, register the function explicitly with app.callback(configure).
  * Parses declared positional arguments and options, stopping before the command name.
  * Supports the same value types, defaults and `help` setting as `@JianCommand`.
  * JianFromContext<C>() parameters receive dependencies from the context supplied to run.

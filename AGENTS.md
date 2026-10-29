@@ -42,14 +42,15 @@ Generated adapter names come from the user's function (`GreetCommand`,
 Each macro is declared twice, attributed (`@JianCommand[app, help: ...]`) and plain (`@JianCommand`): cjc rejects the plain form of a macro declared only with `attrs`.
 
 `JianApp` has no injected context; `JianContextApp<C>` receives one per run.
-`@JianCommand[app]` and `@JianCallback[app]` create a typed value under the
-original declaration name and register it in the positional app. Named `app:` is
-rejected. Without an app, register values explicitly via `.add(command)` or
-`.callback(configure)`. Direct invocations use `command.call(...)`, retaining
+`@JianCommand[app]` and `@JianCallback[app]` preserve the function and
+register its generated adapter in the positional app. One required tag overload
+per function lets registration select the adapter by its expected function type.
+Named `app:` is rejected. Without an app, register functions explicitly via
+`.add(command)` or `.callback(configure)`. Direct invocations use `command(...)`, retaining
 parameter types and defaults. Implementations and default helpers stay at package
 scope to preserve lexical bindings independently of generated adapter members.
-Values retain the original declaration visibility. Mount children with
-`.add(child, name: "users", help: "...")`; names and help overrides belong to the
+Functions and registration overloads retain the original declaration visibility.
+Mount children with `.add(child, name: "users", help: "...")`; names and help overrides belong to the
 mount, not the child. Context-free children ignore the parent context. Different
 context types require `Child <: FromParentContext<Child>`, generated for direct
 fields by `@JianContext`. Its local `AppsFromParentContext` interface exports the

@@ -3,8 +3,8 @@ macro package jian
 import std.ast.*
 
 /**
- * Generates a command value under the declared name, with a typed call method and CLI parsing.
- * An optional app registers the value; parameter defaults remain available through call.
+ * Preserves the function and generates a typed CLI adapter and registration overload.
+ * An optional app registers the command; direct calls retain parameter defaults.
  * JianFromContext<C>() parameters are injected by type and remain required in direct calls.
  */
 public macro JianCommand(attrs: Tokens, input: Tokens): Tokens {
@@ -269,22 +269,17 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             if (let JianArg.Operand(_) <- __jian_arg) { break }
         }
     ) } else { Tokens() }
-    let callDeclaration = FuncDecl(declaration.toTokens())
-    callDeclaration.identifier = Token(TokenKind.IDENTIFIER, "call")
-    callDeclaration.modifiers.clear()
-    callDeclaration.modifiers.add(Modifier(Token(TokenKind.PUBLIC)))
-    callDeclaration.block = FuncDecl(quote(func __jian_forward() { $(implementation)($(arguments)) })).block
-    for (index in 0..callDeclaration.funcParams.size) {
-        let parameter = callDeclaration.funcParams[index]
-        if (parameter.assign.kind == TokenKind.ASSIGN) {
-            let defaultName = Token(TokenKind.IDENTIFIER, "__jian_default_${sourceName}_${index}")
-            let previous = earlierArguments(declaration, index)
-            parameter.expr = parseExpr(quote($(defaultName)($(previous))))
-        }
+    let directDeclaration = FuncDecl(declaration.toTokens())
+    // Resolve the function outside adapter members such as run/name/spec.
+    declaration.block = FuncDecl(quote(func __jian_forward() { $(functionName)($(arguments)) })).block
+    for (index in 0..declaration.funcParams.size) {
         if (declaration.funcParams[index].assign.kind == TokenKind.ASSIGN) {
             declaration.funcParams[index] = withoutDefault(declaration.funcParams[index])
         }
     }
+    let tagToken = Token(TokenKind.IDENTIFIER, interfaceToken.value + "Tag")
+    let tagType = if (contextType.size == 0) { quote($(tagToken)) }
+        else { quote($(tagToken)<$(contextType)>) }
     declaration.identifier = implementation
     declaration.modifiers.clear()
     declaration.modifiers.add(Modifier(Token(TokenKind.PRIVATE)))
@@ -293,10 +288,11 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     } else {
         quote(let _ = ($(app)).add($(functionName));)
     }
-    // Put the value first so recursive bodies can refer to their own command through .call.
-    quote($(visibility) let $(functionName) = $(className)();) + defaultHelpers + declaration.toTokens() + quote(
+    // The required tag lets registration select an adapter without changing ordinary calls.
+    directDeclaration.toTokens() + defaultHelpers + declaration.toTokens() + quote(
+        $(visibility) func $(functionName)(_: $(tagType)): $(interfaceName) { $(className)() }
+
         $(visibility) class $(className) <: $(interfaceName) {
-            $(callDeclaration)
             $(commandName)
             public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)]) } }
             public func run(__jian_args: JianArgCursor $(contextArgument)): Int64 {

@@ -1,4 +1,4 @@
-// expect-error: mismatched types
+// expect-error: no matching function declaration
 package fixture
 import jian.*
 @JianContext

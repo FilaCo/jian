@@ -80,12 +80,14 @@ func sumValues(values!: Array<Int64> = JianArgument(default: [])): Int64 {
 @JianCommand
 func overloaded(value: String): Int64 { value.size }
 
+func overloaded(value: Int64): Int64 { value + 1 }
+
 @Test
 class CommandMacroTest {
     @TestCase
     func variadicPathsCollectRemainingOperandsAroundNamedOptions() {
         // arrange
-        let command = copyFiles
+        let command = CopyFilesCommand()
 
         // act
         let code = command.run(JianArgCursor(["out", "first", "--verbose", "second", "--", "--third"]))
@@ -103,7 +105,7 @@ class CommandMacroTest {
     @TestCase
     func variadicElementsKeepTheirDeclaredTypeAndReportInvalidValues() {
         // arrange
-        let command = sumValues
+        let command = SumValuesCommand()
 
         // act
         let total = command.run(JianArgCursor(["1", "2", "3"]))
@@ -113,13 +115,16 @@ class CommandMacroTest {
         @Expect(total, 6)
         @Expect(command.run(JianArgCursor([])), 0)
         @Expect(invalid.message, "invalid value 'bad' for 'VALUES': expected Int64")
-        @Expect(overloaded.run(JianArgCursor(["hello"])), 5)
+        @Expect(OverloadedCommand().run(JianArgCursor(["hello"])), 5)
+        @Expect(overloaded("hello"), 5)
+        @Expect(overloaded(5), 6)
+        @Expect(JianApp().add(overloaded).run(["overloaded", "hello"]), 5)
     }
 
     @TestCase
     func generatesMetadataAndTypedPositionalAndNamedParsing() {
         // arrange
-        let command = greet_user
+        let command = Greet_userCommand()
 
         // act
         let code = command.run(JianArgCursor(["Alice", "--times=4"]))
@@ -140,7 +145,7 @@ class CommandMacroTest {
     @TestCase
     func defaultsRetainEarlierParameterAndPrivateNames() {
         // arrange
-        let command = dependent
+        let command = DependentCommand()
 
         // act
         let code = command.run(JianArgCursor(["name"]))
@@ -155,7 +160,7 @@ class CommandMacroTest {
     @TestCase
     func explicitFlagDefaultAndOptionalValuesAllowAbsence() {
         // arrange
-        let command = implicit
+        let command = ImplicitCommand()
 
         // act
         command.run(JianArgCursor([]))
@@ -173,7 +178,7 @@ class CommandMacroTest {
     @TestCase
     func repeatedOptionsAccumulateInTheDeclaredArray() {
         // arrange
-        let command = collect
+        let command = CollectCommand()
 
         // act
         let code = command.run(JianArgCursor(["--paths", "a", "--paths=b"]))
@@ -190,7 +195,7 @@ class CommandMacroTest {
     func defaultsAreEvaluatedOnlyWhenAbsentAndHelpDoesNotRunThem() {
         // arrange
         defaultCalls = 0
-        let command = lazy
+        let command = LazyCommand()
 
         // act
         let metadata = command.spec
@@ -206,10 +211,10 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func commandValuesUseKebabCaseCliNames() {
+    func generatedAdaptersUseKebabCaseCliNames() {
         // arrange
-        let quoted = `quoted_name`
-        let camel = camelCase
+        let quoted = Quoted_nameCommand()
+        let camel = CamelCaseCommand()
 
         // act
         let code = quoted.run(JianArgCursor([]))
@@ -224,7 +229,7 @@ class CommandMacroTest {
     @TestCase
     func aliasesPreserveFlagAndOptionalValueBehavior() {
         // arrange
-        let command = aliases
+        let command = AliasesCommand()
 
         // act
         let code = command.run(JianArgCursor(["--enabled", "--jobs=6"]))
@@ -233,22 +238,22 @@ class CommandMacroTest {
         @Expect(code, 6)
         @Expect(command.run(JianArgCursor([])), -1)
         @Expect(command.spec.inputs[0].kind, JianInputKind.Flag)
-        @Expect(inferred.run(JianArgCursor([])), 9)
-        @Expect(textDefault.run(JianArgCursor([])), 5)
-        @Expect(textDefault.spec.inputs[0].defaultShown, Some("\"hello\""))
+        @Expect(InferredCommand().run(JianArgCursor([])), 9)
+        @Expect(TextDefaultCommand().run(JianArgCursor([])), 5)
+        @Expect(TextDefaultCommand().spec.inputs[0].defaultShown, Some("\"hello\""))
     }
 
     @TestCase
     func malformedArgumentsReportUsageErrorsWithInputContext() {
         // arrange
-        let command = greet_user
+        let command = Greet_userCommand()
 
         // act
         let missing = @AssertThrows[JianUsageException](command.run(JianArgCursor([])))
         let invalid = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "--times=bad"])))
         let unknown = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "--other"])))
         let missingValue = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "--times"])))
-        let namedMissing = @AssertThrows[JianUsageException](requiredNumber.run(JianArgCursor([])))
+        let namedMissing = @AssertThrows[JianUsageException](RequiredNumberCommand().run(JianArgCursor([])))
         let surplus = @AssertThrows[JianUsageException](command.run(JianArgCursor(["Alice", "Bob"])))
 
         // assert

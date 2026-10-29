@@ -23,10 +23,11 @@ func configure(verbose!: Bool = false): Unit {
 main(args: Array<String>): Int64 { app.run(args) }
 ```
 
-The macros turn each function declaration into a typed command or callback value
-under its original name. Its `.call(...)` method keeps the declared parameters,
-named arguments and defaults. CLI parsing invokes the same implementation.
-Creating or registering a value never calls its body or evaluates its defaults.
+The macros preserve each function's name, parameter types, named arguments and
+defaults. They also generate a typed CLI adapter and one registration overload
+with a required tag parameter. The expected type in `.add(create)` or
+`.callback(configure)` selects that overload automatically. Registration never
+calls the function body or evaluates its defaults.
 
 The optional first positional macro argument selects the registration app;
 `help:` is a named setting. Named `app:` is not accepted. The app must be
@@ -48,19 +49,24 @@ let users = JianApp().add(create)
 let admins = JianApp().add(create)
 
 // Direct calls skip CLI parsing and preserve defaults.
-create.call("Alice")
-create.call("Alice", verbose: true)
+create("Alice")
+create("Alice", verbose: true)
 ```
 
-Callbacks work the same way: `@JianCallback` creates a value and
-`app.callback(configure)` attaches it. Reusing command/callback values allows
-independent app registries. Register each value only once in a given app.
+Callbacks work the same way: `app.callback(configure)` registers the annotated
+function. The same function can be registered in independent apps. Register it
+only once in a given app.
 
-A command value is not a function value; use its method when a function is needed,
-for example `let action: (String, Bool) -> Unit = create.call`. Defaults belong to
-method invocation, so the function value takes all its parameters. Command values
-must precede their uses in the same file and cannot share names with overloads.
-Inside a recursive body, refer to the command through `create.call(...)`.
+When taking a function value, provide its type to select the ordinary overload:
+`let action: (String, Bool) -> Unit = create`. Defaults belong to direct function
+calls, so a function value takes all its parameters. Recursive bodies call
+`create(...)` normally, and functions may be called before their declaration.
+The function and registration overload retain the original visibility.
+
+The generated adapter remains available as `CreateCommand()` (or
+`ConfigureCallback()`) when explicit access to CLI metadata or parsing is needed.
+The registration tag types are implementation details; ordinary calls do not
+supply them.
 
 ## Mounts
 
@@ -114,7 +120,7 @@ func create(name: String): Unit {
 }
 ```
 
-The executable imports only the app; the command values need not be public:
+The executable imports only the app; the command functions need not be public:
 
 ```cangjie
 package demo
@@ -125,10 +131,10 @@ let app = JianApp(name: "demo").add(users, name: "users")
 main(args: Array<String>): Int64 { app.run(args) }
 ```
 
-To export an individual command for explicit registration, mark its declaration
-`public`. Consumers can import that value and pass it to `.add(create)` or invoke
-`create.call(...)`. The [sub-app example](../examples/sub_apps/src/main.cj) registers
-an imported `deploy` value at the root as well as in its original project app.
+To export an individual command function for explicit registration, mark its declaration
+`public`. Consumers can import that function and pass it to `.add(create)` or invoke
+`create(...)`. The [sub-app example](../examples/sub_apps/src/main.cj) registers
+an imported `deploy` function at the root as well as in its original project app.
 
 A separate package can also import that app and register additional handlers.
 The executable must import that extra package, directly or transitively, for its

@@ -106,8 +106,8 @@ class ContextTest {
 
         // assert
         @Expect(code, 0)
-        @Expect(recordContext.spec.inputs.size, 1)
-        @Expect(configureContext.spec.inputs.size, 2)
+        @Expect(RecordContextCommand().spec.inputs.size, 1)
+        @Expect(ConfigureContextCallback().spec.inputs.size, 2)
         @Expect(text.contains("VALUE"), true)
         @Expect(text.contains("--trace"), false)
         @Expect(text.contains("--enabled"), false)
@@ -178,8 +178,8 @@ class ContextTest {
         let context = TestContext(trace)
 
         // act
-        configureContext.call(ctx: context, trace: trace, enabled: true)
-        let code = recordContext.call("direct", trace: trace, enabled: context.enabled, optional: None)
+        configureContext(ctx: context, trace: trace, enabled: true)
+        let code = recordContext("direct", trace: trace, enabled: context.enabled, optional: None)
 
         // assert
         @Expect(code, 7)
@@ -190,7 +190,7 @@ class ContextTest {
     func injectionAfterVariadicArgumentUsesPrimaryConstructorFields() {
         // arrange
         let trace = ContextTrace()
-        let command = contextFiles
+        let command = ContextFilesCommand()
 
         // act
         let code = command.run(JianArgCursor(["a", "b"]), PrimaryContext(trace))
@@ -253,7 +253,7 @@ class ContextTest {
         let trace = ContextTrace()
         trace.events = "existing"
         let context = TestContext(trace)
-        let command = contextDefault
+        let command = ContextDefaultCommand()
 
         // act
         command.run(JianArgCursor([]), context)
