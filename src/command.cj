@@ -85,6 +85,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     let implementation = Token(TokenKind.IDENTIFIER, "__jian_${suffix.toAsciiLower()}_${sourceName}")
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
+    var defaultAction = quote(None)
     var app = Tokens()
     var usedSettings: Array<String> = []
     if (attrs.size != 0) {
@@ -103,6 +104,9 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             usedSettings = usedSettings.concat([key])
             match (key) {
                 case "help" => help = setting.expr.toTokens()
+                case "defaultAction" =>
+                    if (!callback) { throw ASTException("defaultAction is only supported by @JianCallback") }
+                    defaultAction = quote(Some($(setting.expr.toTokens())))
                 case "app" => app = setting.expr.toTokens()
                 case _ => throw ASTException("unknown Jian${suffix} setting '${key}'")
             }
@@ -125,6 +129,22 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let typeName = parameter.paramType.toTokens()
         let slot = Token(TokenKind.IDENTIFIER, "__jian_value_${index}")
         let settings = parameterSettings(parameter)
+        if (settings.marker == "JianCurrentInvocation") {
+            if (!callback) { throw ASTException("JianCurrentInvocation is only supported by @JianCallback") }
+            if (typeName.toString().replace(" ", "") != "JianInvocation") {
+                throw ASTException("JianCurrentInvocation requires parameter type JianInvocation")
+            }
+            declaration.funcParams[index] = withoutDefault(parameter)
+            // Bind after the parser loop: positional inputs and option values belong to the callback.
+            bindings += quote(let $(identifier): JianInvocation = JianInvocation(requestedSubcommand:
+                match (__jian_args.peek()) {
+                    case Some(JianArg.Operand(__jian_requested)) => Some(__jian_requested)
+                    case _ => None
+                });)
+            if (index > 0) { arguments += quote(,) }
+            arguments += quote($(identifier): $(identifier))
+            continue
+        }
         if (settings.marker == "JianFromContext") {
             declaration.funcParams[index] = withoutDefault(parameter)
             bindings += quote(let $(identifier): $(typeName) = $(contextType).jianFromContext<$(typeName)>(__jian_context);)
@@ -303,7 +323,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
 
         $(visibility) class $(className) <: $(interfaceName) {
             $(commandName)
-            public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)]) } }
+            public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)], defaultAction: $(defaultAction)) } }
             public func run(__jian_args: JianArgCursor $(contextArgument)): $(returnType) {
                 $(storage)
                 var __jian_position = 0

@@ -2,15 +2,25 @@ package callback_exit_example
 
 import jian.*
 
-let app = JianApp(name: "demo", help: "A CLI with an informational option and a subcommand.")
+let app = JianApp(name: "demo", help: "A CLI with a default action, an informational option and a subcommand.")
 
-@JianCallback[app]
-func configure(configSchema!: Bool = JianOption(help: "Print the configuration schema and exit.", default: false)) {
+@JianCallback[app, defaultAction: "Run the server over stdio."]
+func configure(invocation!: JianInvocation = JianCurrentInvocation(),
+    configSchema!: Bool = JianOption(help: "Print the configuration schema and exit.", default: false)) {
     if (configSchema) {
         println("{\"type\":\"object\"}")
         return JianCallbackResult.Exit(0)
     }
+    if (invocation.requestedSubcommand.isNone()) {
+        return JianCallbackResult.Exit(runServer())
+    }
     JianCallbackResult.Continue
+}
+
+// This example only prints the selected action; an application would run its server here.
+func runServer(): Int64 {
+    println("Running server over stdio")
+    0
 }
 
 @JianCommand[app, help: "Fetch source files."]

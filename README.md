@@ -168,6 +168,17 @@ selected command, while `Exit(code)` returns immediately from `app.run`, includi
 a subcommand. See [callback completion](docs/applications.md#callback-completion)
 for options such as `--config-schema` that complete without a subcommand.
 
+For a default action, inject `invocation!: JianInvocation = JianCurrentInvocation()`
+into the callback. After parsing its own arguments and options,
+`invocation.requestedSubcommand` is `None` when no command was requested; call an
+ordinary function for the default action and return `Exit(code)`. Known and unknown
+names both produce `Some(name)`, so typos retain their normal errors after
+`Continue`. This works in both app types, independently of typed dependencies.
+`@JianCallback[defaultAction: "Run the server"]` documents the action and marks
+command selection optional in help; execution remains the callback's responsibility.
+Direct calls supply `JianInvocation` explicitly. See
+[invocation metadata and default actions](docs/applications.md#invocation-metadata-and-default-actions).
+
 ## Typed context
 
 Use `@JianContext` on an application state class and request its fields with
@@ -261,7 +272,7 @@ Run it from its directory with `cjpm run -- ...`.
 
 | Example | Demonstrates | Arguments |
 | --- | --- | --- |
-| [callback_exit](examples/callback_exit/src/main.cj) | Successful callback completion alongside subcommands | `--config-schema` or `fetch-src` |
+| [callback_exit](examples/callback_exit/src/main.cj) | Default action, callback completion and subcommands | no arguments, `--config-schema` or `fetch-src` |
 | [greet](examples/greet/src/main.cj) | Arguments, defaults, flags and short clusters | `greet Alice -lt2` |
 | [sync](examples/sync/src/main.cj) | Variadic paths, repeated options, optional values | `sync src docs -nj4 -x target --exclude=.git` |
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |

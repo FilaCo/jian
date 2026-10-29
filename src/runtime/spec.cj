@@ -14,7 +14,12 @@ public struct JianCommandSpec {
         /**
          * Arguments and options, in declaration order.
          */
-        public let inputs!: Array<JianInputSpec> = []
+        public let inputs!: Array<JianInputSpec> = [],
+        /**
+         * Describes the callback's default action in app help; marks COMMAND optional in usage.
+         * Presentation only: the callback must implement the action and return Exit(code).
+         */
+        public let defaultAction!: ?String = None
     ) {}
 }
 

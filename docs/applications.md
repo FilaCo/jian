@@ -31,8 +31,9 @@ with a required tag parameter. The expected type in `.add(create)` or
 calls the function body or evaluates its defaults.
 
 The optional first positional macro argument selects the registration app;
-`help:` is a named setting. Named `app:` is not accepted. The app must be
-initialized before automatic registration. In the same file, declare it first.
+`help:` is a named setting; callbacks also accept `defaultAction:` for help text.
+Named `app:` is not accepted. The app must be initialized before automatic
+registration. In the same file, declare it first.
 A second callback or a conflicting command/group name throws
 `IllegalArgumentException` during assembly. With global registration, that error
 occurs during program initialization, before `main`.
@@ -107,6 +108,78 @@ commands and child context projections are skipped. The library does not termina
 the process or close the caller's streams. A thrown `JianUsageException` produces
 the normal usage error and code 2; other exceptions propagate to the caller.
 See the runnable [callback exit example](../examples/callback_exit/src/main.cj).
+
+## Invocation metadata and default actions
+
+A callback can request a read-only `JianInvocation` independently of dependency
+context `C`. Use a named parameter declared as `JianInvocation` with the marker
+`JianCurrentInvocation()`:
+
+```cangjie
+@JianCallback[app, defaultAction: "Run the server over stdio."]
+func configure(invocation!: JianInvocation = JianCurrentInvocation(),
+    configSchema!: Bool = false) {
+    if (configSchema) {
+        printConfigSchema()
+        return JianCallbackResult.Exit(0)
+    }
+    if (invocation.requestedSubcommand.isNone()) {
+        return JianCallbackResult.Exit(runServer())
+    }
+    JianCallbackResult.Continue
+}
+```
+
+Here `runServer(): Int64` and `printConfigSchema()` are ordinary application
+functions. `demo` runs the default action, `demo --config-schema` prints the
+schema and exits, and `demo fetch-src` runs the named command. See the runnable
+[callback example](../examples/callback_exit/src/main.cj), whose server function
+prints the selected action.
+
+`requestedSubcommand: ?String` is the next command operand **after** the callback
+parser has consumed its own arguments and options. It does not consume that
+operand. Positional inputs, option values, short clusters and `--` use the normal
+parser rules. An option value equal to a command name is still a value. Required
+callback inputs must be supplied before the body can run; this is not an eager
+option action.
+
+The name is requested, not validated: `demo fetch-scr` supplies `Some("fetch-scr")`,
+so a typo cannot accidentally trigger the default action. Returning `Continue`
+then produces the normal unknown-command error. Returning `Exit(code)` skips all
+remaining dispatch, including name and command input validation. Without an
+operand the property is `None`; returning `Continue` preserves the missing-command
+error for apps with commands/groups and success for callback-only apps.
+
+Metadata is fresh for every run and every app level. For `demo users create`, the
+root sees `Some("users")` (the mount name), and the users callback sees
+`Some("create")`. Neither the app's standalone name nor a previous run affects it.
+Root help skips the root callback. Nested help may run ancestor callbacks; they
+see the requested child, so the default-action guard above does not start their
+server. Callbacks keep their root-to-leaf order, completion codes and exception
+behavior. Both `JianApp` and `JianContextApp<C>` support injection, with or without
+`JianFromContext<C>()` parameters. No dependency-context changes are required.
+
+`defaultAction: "description"` is optional help metadata: app help includes a
+`Default action:` description and usage shows `[COMMAND [ARGS]...]` when commands
+are registered. It does not change execution or permit a missing command by
+itself; the callback must implement the action and return `Exit(code)`. Merely
+reading invocation metadata does not mark command selection optional. Without
+`defaultAction`, help retains its existing usage, and the callback's `help:` can
+still describe its behavior.
+
+Injection creates no CLI argument, option or help row. It is supported only by
+`@JianCallback`, requires the explicit type spelling `JianInvocation`, and takes
+no arguments or type arguments. The macro removes the marker default, so direct
+calls must supply the typed metadata explicitly:
+
+```cangjie
+configure(invocation: JianInvocation()) // no requested command
+configure(invocation: JianInvocation(requestedSubcommand: Some("fetch-src")))
+```
+
+Direct calls skip CLI parsing and retain other parameter defaults. Imported public
+callbacks work the same way. The value currently contains only the requested name;
+it does not expose a full mount path or a string-keyed context.
 
 ## Mounts
 

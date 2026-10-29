@@ -11,6 +11,10 @@ import std.ast.*
  * The return type may be inferred; exceptions propagate through app.run.
  * Supports the same value types, defaults and `help` setting as `@JianCommand`.
  * JianFromContext<C>() parameters receive dependencies from the context supplied to run.
+ * JianCurrentInvocation() injects JianInvocation after parsing, without creating a CLI input;
+ * direct callers must supply it explicitly. requestedSubcommand may name an unknown command.
+ * `defaultAction: "description"` documents a callback default action and marks COMMAND optional
+ * in help only; the callback implements it by returning Exit(code) when no command is requested.
  */
 public macro JianCallback(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input, callback: true)
