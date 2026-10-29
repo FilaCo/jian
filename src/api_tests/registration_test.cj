@@ -10,16 +10,16 @@ private func registeredDefault(): Int64 {
     6
 }
 
-@JianCommand[app: registeredUsers]
+@JianCommand[registeredUsers]
 func registeredLazy(value!: Int64 = registeredDefault()): Int64 { value }
 
-@JianCallback[app: registeredUsers]
+@JianCallback[registeredUsers]
 func registeredSettings(stop!: Int64 = 0): Int64 { stop }
 
-@JianCommand[app: registeredUsers, help: "Add two numbers"]
+@JianCommand[registeredUsers, help: "Add two numbers"]
 func registeredAdd(value: Int64, amount!: Int64 = 4): Int64 { value + amount }
 
-@JianCommand[app: registeredUsers]
+@JianCommand[registeredUsers]
 func registeredIdentity(value: Int64): Int64 { value }
 
 @Test
@@ -49,13 +49,13 @@ class RegistrationTest {
     }
 
     @TestCase
-    func registeredFunctionsPreserveDefaultsAndFunctionValues() {
+    func registeredValuesPreserveDefaultsAndExposeCallableMethods() {
         // arrange
-        let identity: (Int64) -> Int64 = registeredIdentity
+        let identity: (Int64) -> Int64 = registeredIdentity.call
 
         // act
-        let defaulted = registeredAdd(3)
-        let explicit = registeredAdd(3, amount: 5)
+        let defaulted = registeredAdd.call(3)
+        let explicit = registeredAdd.call(3, amount: 5)
         let fromFunctionValue = identity(9)
 
         // assert

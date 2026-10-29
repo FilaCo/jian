@@ -10,12 +10,12 @@ help and usage. A command keeps its name even if it is the app's only command.
 ```cangjie
 let app = JianApp(name: "demo")
 
-@JianCommand[app: app, help: "Create a user."]
+@JianCommand[app, help: "Create a user."]
 func create(name: String): Unit {
     println("Creating ${name}")
 }
 
-@JianCallback[app: app]
+@JianCallback[app]
 func configure(verbose!: Bool = false): Unit {
     if (verbose) { println("Verbose mode enabled") }
 }
@@ -23,21 +23,44 @@ func configure(verbose!: Bool = false): Unit {
 main(args: Array<String>): Int64 { app.run(args) }
 ```
 
-The macros preserve the ordinary functions, rewrite parameter markers as before,
-and emit an adapter plus a global initializer that registers it. Registration
-never calls the function or evaluates its parameter defaults. Direct calls keep
-their typed signatures and defaults; functions can still be passed as values.
+The macros turn each function declaration into a typed command or callback value
+under its original name. Its `.call(...)` method keeps the declared parameters,
+named arguments and defaults. CLI parsing invokes the same implementation.
+Creating or registering a value never calls its body or evaluates its defaults.
 
-Macro settings are named: `app:` selects the application and `help:` supplies the
-description. The top-level app must be initialized before registration. In the
-same file, declare the app first. A second callback or a conflicting command/group
-name throws `IllegalArgumentException` during assembly. With global registration,
-that error occurs during program initialization, before `main`.
+The optional first positional macro argument selects the registration app;
+`help:` is a named setting. Named `app:` is not accepted. The app must be
+initialized before automatic registration. In the same file, declare it first.
+A second callback or a conflicting command/group name throws
+`IllegalArgumentException` during assembly. With global registration, that error
+occurs during program initialization, before `main`.
 
-Without `app:`, `@JianCommand` and `@JianCallback` still generate adapters for
-explicit assembly, such as `app.add(CreateCommand())` and
-`app.callback(ConfigureCallback())`. Register each adapter only once. This also
-allows callers to build independent app instances without shared global apps.
+To attach a command separately, omit the app from its macro:
+
+```cangjie
+@JianCommand[help: "Create a user."]
+func create(name: String, verbose!: Bool = false): Unit {
+    println(name)
+    if (verbose) { println("Verbose mode enabled") }
+}
+
+let users = JianApp().add(create)
+let admins = JianApp().add(create)
+
+// Direct calls skip CLI parsing and preserve defaults.
+create.call("Alice")
+create.call("Alice", verbose: true)
+```
+
+Callbacks work the same way: `@JianCallback` creates a value and
+`app.callback(configure)` attaches it. Reusing command/callback values allows
+independent app registries. Register each value only once in a given app.
+
+A command value is not a function value; use its method when a function is needed,
+for example `let action: (String, Bool) -> Unit = create.call`. Defaults belong to
+method invocation, so the function value takes all its parameters. Command values
+must precede their uses in the same file and cannot share names with overloads.
+Inside a recursive body, refer to the command through `create.call(...)`.
 
 ## Mounts
 
@@ -85,13 +108,13 @@ public let app = JianApp(help: "Users")
 package demo.users
 import jian.*
 
-@JianCommand[app: app]
+@JianCommand[app]
 func create(name: String): Unit {
     println(name)
 }
 ```
 
-The executable imports only the app; the handlers need not be public:
+The executable imports only the app; the command values need not be public:
 
 ```cangjie
 package demo
@@ -101,6 +124,11 @@ import demo.users.app as users
 let app = JianApp(name: "demo").add(users, name: "users")
 main(args: Array<String>): Int64 { app.run(args) }
 ```
+
+To export an individual command for explicit registration, mark its declaration
+`public`. Consumers can import that value and pass it to `.add(create)` or invoke
+`create.call(...)`. The [sub-app example](../examples/sub_apps/src/main.cj) registers
+an imported `deploy` value at the root as well as in its original project app.
 
 A separate package can also import that app and register additional handlers.
 The executable must import that extra package, directly or transitively, for its

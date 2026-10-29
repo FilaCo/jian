@@ -2,5 +2,5 @@
 package fixture
 import jian.*
 let app = JianApp()
-@JianCommand[app: app, app: app]
+@JianCommand[app, app]
 func bad(): Unit {}

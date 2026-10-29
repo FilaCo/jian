@@ -21,7 +21,7 @@ enum Color <: JianArgValue<Color> {
 
 let app = JianApp(name: "demo")
 
-@JianCommand[app: app, help: "Choose a paint color."]
+@JianCommand[app, help: "Choose a paint color."]
 func paint(color!: Color = JianOption(short: 'c', help: "red or blue")): Unit {
     match (color) {
         case Red => println("Painting red")

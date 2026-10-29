@@ -34,7 +34,7 @@ class MacroIntegrationTest {
         integrationEvents = ""
         let errors = ByteBuffer()
         let app = JianApp(name: "test", stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-vj3", "-pa", "-p", "b", "integration-files", "first", "-vt2", "second"])
@@ -43,17 +43,17 @@ class MacroIntegrationTest {
         @Expect(code, 4)
         @Expect(integrationEvents, "global:true:3:[a, b];files:[first, second]:true:2;")
         @Expect(errors.bytes().size, 0)
-        @Expect(IntegrationGlobalCallback().spec.inputs[0].short, Some(b'v'))
-        @Expect(IntegrationGlobalCallback().spec.inputs[0].help, "Verbose workspace")
-        @Expect(IntegrationGlobalCallback().spec.inputs[2].hidden, true)
-        @Expect(IntegrationFilesCommand().spec.inputs[0].repeatable, true)
-        @Expect(IntegrationFilesCommand().spec.inputs[0].help, "Input paths")
+        @Expect(integrationGlobal.spec.inputs[0].short, Some(b'v'))
+        @Expect(integrationGlobal.spec.inputs[0].help, "Verbose workspace")
+        @Expect(integrationGlobal.spec.inputs[2].hidden, true)
+        @Expect(integrationFiles.spec.inputs[0].repeatable, true)
+        @Expect(integrationFiles.spec.inputs[0].help, "Input paths")
     }
 
     @TestCase
     func callbackVariadicCollectsAllOperandsWhenUsedWithoutSubcommands() {
         // arrange
-        let app = JianApp(name: "test").callback(IntegrationArgumentsCallback())
+        let app = JianApp(name: "test").callback(integrationArguments)
 
         // act
         let code = app.run(["first", "second", "--", "-third"])
@@ -67,7 +67,7 @@ class MacroIntegrationTest {
     func callbackShortValueCanEqualASubcommandName() {
         // arrange
         integrationEvents = ""
-        let app = JianApp(name: "test").callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+        let app = JianApp(name: "test").callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-p", "integration-files", "integration-files", "input"])
@@ -84,7 +84,7 @@ class MacroIntegrationTest {
         let output = ByteBuffer()
         let errors = ByteBuffer()
         let app = JianApp(name: "test", stdout: output, stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-vj3", "-h"])
@@ -108,7 +108,7 @@ class MacroIntegrationTest {
         let output = ByteBuffer()
         let errors = ByteBuffer()
         let app = JianApp(name: "test", stdout: output, stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["integration-files", "-vt2", "-h"])
@@ -130,7 +130,7 @@ class MacroIntegrationTest {
         let output = ByteBuffer()
         let errors = ByteBuffer()
         let app = JianApp(name: "test", stdout: output, stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-p", "-h", "integration-files", "--", "-h"])

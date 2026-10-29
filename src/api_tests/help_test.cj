@@ -36,7 +36,7 @@ class HelpMacroTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(HelpMarkersCommand())
+        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(helpMarkers)
 
         // act
         let code = app.run(["help-markers"].concat(input))
@@ -56,7 +56,7 @@ class HelpMacroTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).callback(HelpSettingsCallback())
+        let app = JianApp(name: "demo", stdout: output, stderr: errors).callback(helpSettings)
 
         // act
         let code = app.run(["--help"])
@@ -92,7 +92,7 @@ class HelpMacroTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(HelpGreetingCommand())
+        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(helpGreeting)
 
         // act
         let code = app.run(["help-greeting", "--help"])
@@ -114,7 +114,7 @@ class HelpMacroTest {
         let inputs: Array<Array<String>> = [[], ["Ann", "--x"], ["Ann", "--times=abc"]]
         let messages = ["missing argument 'NAME'", "unknown option '--x'",
             "invalid value 'abc' for '--times': expected Int64"]
-        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(HelpGreetingCommand())
+        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(helpGreeting)
 
         // act
         let code = app.run(["help-greeting"].concat(inputs[index]))

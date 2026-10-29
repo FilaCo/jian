@@ -23,7 +23,7 @@ public class JianApp {
 
     /**
      * Registers a command adapter; duplicate names throw IllegalArgumentException.
-     * @JianCommand[app: app] generates this registration automatically.
+     * @JianCommand[app] generates this registration automatically.
      */
     public func add(command: JianCommand): JianApp {
         core.add(PlainCommand<Unit>(command))
@@ -41,7 +41,7 @@ public class JianApp {
 
     /**
      * Registers the single app callback; a second callback throws IllegalArgumentException.
-     * @JianCallback[app: app] generates this registration automatically.
+     * @JianCallback[app] generates this registration automatically.
      */
     public func callback(value: JianCallback): JianApp {
         core.callback(PlainCallback<Unit>(value))

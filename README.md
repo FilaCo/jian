@@ -36,9 +36,7 @@ package demo
 
 import jian.*
 
-let app = JianApp(name: "demo", help: "A first jian CLI.")
-
-@JianCommand[app: app, help: "Greet someone."]
+@JianCommand[help: "Greet someone."]
 func greet(
     name!: String = JianArgument(help: "Name to greet"),
     times!: Int64 = JianOption(short: 't', help: "Repetitions", default: 1),
@@ -49,6 +47,8 @@ func greet(
         println(if (loud) { message.toAsciiUpper() } else { message })
     }
 }
+
+let app = JianApp(name: "demo", help: "A first jian CLI.").add(greet)
 
 main(args: Array<String>): Int64 { app.run(args) }
 ```
@@ -65,11 +65,12 @@ cjpm run -- --help
 cjpm run -- greet --help
 ```
 
-The macro preserves `greet` as an ordinary function and registers its generated
-adapter in `app`. The command name is `greet`; camelCase and snake_case CLI names
-become kebab-case. `JianApp` needs no context; `JianContextApp<C>` receives typed
-dependencies. `app.run` takes arguments excluding the executable name, which is
-exactly what `main(args)` receives.
+The macro creates a typed command value named `greet`; `.add(greet)` registers it.
+Call `greet.call(name: "Alice", times: 2)` directly without CLI parsing. The method
+keeps the declared parameter types and defaults. The command name is `greet`;
+camelCase and snake_case CLI names become kebab-case. `JianApp` needs no context;
+`JianContextApp<C>` receives typed dependencies. `app.run` takes arguments
+excluding the executable name, which is exactly what `main(args)` receives.
 
 ## Parameters become arguments and options
 
@@ -119,7 +120,7 @@ several names:
 ```cangjie
 let users = JianApp(help: "User management.")
 
-@JianCommand[app: users]
+@JianCommand[users]
 func create(name: String): Unit {
     println("Creating ${name}")
 }
@@ -128,7 +129,7 @@ let app = JianApp(name: "demo")
     .add(users, name: "users")
     .add(users, name: "admins", help: "Administrator management.")
 
-@JianCallback[app: app]
+@JianCallback[app]
 func configure(verbose!: Bool = false): Unit {
     if (verbose) { println("Verbose mode enabled") }
 }
@@ -178,12 +179,12 @@ class AppContext {
 
 let app = JianContextApp<AppContext>(name: "demo")
 
-@JianCallback[app: app]
+@JianCallback[app]
 func configure(ctx!: AppContext = JianFromContext<AppContext>(), verbose!: Bool = false): Unit {
     ctx.logger.verbose = verbose
 }
 
-@JianCommand[app: app]
+@JianCommand[app]
 func greet(name: String, logger!: Logger = JianFromContext<AppContext>()): Unit {
     logger.greet(name)
 }
@@ -276,7 +277,7 @@ example. The repository's `pre-push` hook runs the same suite.
 - Help is explicit (`help:`); doc comments are not extracted.
 - Generic command and callback functions are rejected. Written return types must
   be `Unit` or `Int64`; inferred return types must satisfy the same runtime contract.
-- A variadic argument must be the final positional argument. A function overload
-  set may have only one `@JianCommand` adapter.
+- A variadic argument must be the final positional argument. A command value cannot share its name with a
+  function overload or another declaration.
 - Optional type aliases keep their CLI behavior, but need an explicit `None`
   default to make named parameters omissible in direct function calls.

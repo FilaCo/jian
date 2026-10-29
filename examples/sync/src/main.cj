@@ -5,7 +5,7 @@ import std.fs.Path
 
 let app = JianApp(name: "demo")
 
-@JianCommand[app: app, help: "Preview a sync plan without changing files."]
+@JianCommand[app, help: "Preview a sync plan without changing files."]
 func sync(
     paths!: Array<Path> = JianArgument(help: "Paths to sync"),
     jobs!: ?Int64 = JianOption(short: 'j', help: "Worker count"),

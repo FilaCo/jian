@@ -50,7 +50,7 @@ class CallbackMacroTest {
         callbackEvents = ""
         let errors = ByteBuffer()
         let app = JianApp(name: "demo", stderr: errors)
-            .callback(ConfigureCallback()).add(LaunchCommand())
+            .callback(configure).add(launch)
 
         // act
         let code = app.run(["--verbose", "--jobs", "3", "--paths=a", "--paths", "b", "launch", "--verbose"])
@@ -59,17 +59,17 @@ class CallbackMacroTest {
         @Expect(code, 7)
         @Expect(callbackEvents, "callback:true:3:2;command:true;")
         @Expect(errors.bytes().size, 0)
-        @Expect(ConfigureCallback().spec.help, "Global settings")
-        @Expect(ConfigureCallback().spec.inputs[0].kind, JianInputKind.Flag)
-        @Expect(ConfigureCallback().spec.inputs[1].metavar, "INT")
-        @Expect(ConfigureCallback().spec.inputs[2].repeatable, true)
+        @Expect(configure.spec.help, "Global settings")
+        @Expect(configure.spec.inputs[0].kind, JianInputKind.Flag)
+        @Expect(configure.spec.inputs[1].metavar, "INT")
+        @Expect(configure.spec.inputs[2].repeatable, true)
     }
 
     @TestCase
     func optionsAfterCommandDoNotChangeCallbackDefaults() {
         // arrange
         callbackEvents = ""
-        let app = JianApp(name: "demo").callback(ConfigureCallback()).add(LaunchCommand())
+        let app = JianApp(name: "demo").callback(configure).add(launch)
 
         // act
         let code = app.run(["launch", "--verbose"])
@@ -84,7 +84,7 @@ class CallbackMacroTest {
         // arrange
         callbackEvents = ""
         let errors = ByteBuffer()
-        let app = JianApp(name: "demo", stderr: errors).callback(ConfigureCallback()).add(LaunchCommand())
+        let app = JianApp(name: "demo", stderr: errors).callback(configure).add(launch)
 
         // act
         let code = app.run(["launch", "--jobs=4"])
@@ -99,7 +99,7 @@ class CallbackMacroTest {
     func defaultsRemainLazyAndKeepPrivateAndEarlierParameterNames() {
         // arrange
         callbackDefaultCalls = 0
-        let callback = ConfiguredDefaultCallback()
+        let callback = configuredDefault
 
         // act
         let metadata = callback.spec
@@ -119,7 +119,7 @@ class CallbackMacroTest {
     func nonzeroCallbackResultPreventsCommandDispatch() {
         // arrange
         callbackEvents = ""
-        let app = JianApp(name: "demo").callback(CallbackExitCallback()).add(LaunchCommand())
+        let app = JianApp(name: "demo").callback(callbackExit).add(launch)
 
         // act
         let code = app.run(["--code=9", "launch"])
@@ -135,7 +135,7 @@ class CallbackMacroTest {
         let args = JianArgCursor(["project", "--count=2", "launch", "--verbose"])
 
         // act
-        let code = CallbackPositionCallback().run(args)
+        let code = callbackPosition.run(args)
 
         // assert
         @Expect(code, 0)
@@ -150,19 +150,19 @@ class CallbackMacroTest {
         let args = JianArgCursor(["--", "launch", "--verbose"])
 
         // act
-        let code = Empty_callbackCallback().run(args)
+        let code = `empty_callback`.run(args)
 
         // assert
         @Expect(code, 0)
         @Expect(callbackEvents, "empty")
         @Expect(args.remaining(), ["--", "launch", "--verbose"])
-        @Expect(JianApp(name: "demo").callback(Empty_callbackCallback()).run([]), 0)
+        @Expect(JianApp(name: "demo").callback(`empty_callback`).run([]), 0)
     }
 
     @TestCase
     func malformedCallbackOptionsReportTheSameTypedErrorsAsCommands() {
         // arrange
-        let callback = CallbackExitCallback()
+        let callback = callbackExit
 
         // act
         let missing = @AssertThrows[JianUsageException](callback.run(JianArgCursor([])))

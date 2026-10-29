@@ -4,7 +4,7 @@ import jian.*
 import context_example.state.PeopleContext
 import context_example.services.Logger
 
-@JianCommand[app: app]
+@JianCommand[app]
 func greet(name: String, logger!: Logger = JianFromContext<PeopleContext>()): Unit {
     logger.greet(name)
 }

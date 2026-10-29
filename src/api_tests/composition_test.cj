@@ -13,11 +13,11 @@ class ParentContext {
 }
 
 let composedChild = JianContextApp<TestContext>()
-    .callback(ChildContextCallback()).add(RecordContextCommand())
+    .callback(childContext).add(recordContext)
 let composedApp = JianContextApp<ParentContext>(name: "demo")
     .add(composedChild, name: "users")
 
-@JianCallback[app: composedApp]
+@JianCallback[composedApp]
 func replaceChild(parent!: ParentContext = JianFromContext<ParentContext>()): Unit {
     if (let Some(replacement) <- parent.replacement) { parent.child = replacement }
 }

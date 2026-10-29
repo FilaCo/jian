@@ -5,4 +5,4 @@ import jian.*
 
 @JianCommand
 func example(value!: String = JianArgument()) {}
-func caller() { example() }
+func caller() { example.call() }

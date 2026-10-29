@@ -80,8 +80,8 @@ class ContextTest {
         // arrange
         let trace = ContextTrace()
         let context = TestContext(trace)
-        let app = JianContextApp<TestContext>(name: "demo").callback(ConfigureContextCallback())
-            .add(JianContextApp<TestContext>(name: "child").callback(ChildContextCallback()).add(RecordContextCommand()), name: "child")
+        let app = JianContextApp<TestContext>(name: "demo").callback(configureContext)
+            .add(JianContextApp<TestContext>(name: "child").callback(childContext).add(recordContext), name: "child")
 
         // act
         let code = app.run(["--enabled", "child", "record-context", "hello"], context: context)
@@ -98,7 +98,7 @@ class ContextTest {
         // arrange
         let output = ByteBuffer()
         let trace = ContextTrace()
-        let app = JianContextApp<TestContext>(name: "demo", stdout: output).add(RecordContextCommand())
+        let app = JianContextApp<TestContext>(name: "demo", stdout: output).add(recordContext)
 
         // act
         let code = app.run(["record-context", "--help"], context: TestContext(trace))
@@ -106,8 +106,8 @@ class ContextTest {
 
         // assert
         @Expect(code, 0)
-        @Expect(RecordContextCommand().spec.inputs.size, 1)
-        @Expect(ConfigureContextCallback().spec.inputs.size, 2)
+        @Expect(recordContext.spec.inputs.size, 1)
+        @Expect(configureContext.spec.inputs.size, 2)
         @Expect(text.contains("VALUE"), true)
         @Expect(text.contains("--trace"), false)
         @Expect(text.contains("--enabled"), false)
@@ -120,8 +120,8 @@ class ContextTest {
         // arrange
         let trace = ContextTrace()
         let context = TestContext(trace)
-        let app = JianContextApp<TestContext>(name: "demo", stdout: ByteBuffer()).callback(ConfigureContextCallback())
-            .add(JianContextApp<TestContext>(name: "child").callback(ChildContextCallback()).add(RecordContextCommand()), name: "child")
+        let app = JianContextApp<TestContext>(name: "demo", stdout: ByteBuffer()).callback(configureContext)
+            .add(JianContextApp<TestContext>(name: "child").callback(childContext).add(recordContext), name: "child")
 
         // act
         let root = app.run(["--help"], context: context)
@@ -139,8 +139,8 @@ class ContextTest {
     func callbackExitStopsNestedDispatch() {
         // arrange
         let trace = ContextTrace()
-        let app = JianContextApp<TestContext>(name: "demo").callback(ConfigureContextCallback())
-            .add(JianContextApp<TestContext>(name: "child").callback(ChildContextCallback()).add(RecordContextCommand()), name: "child")
+        let app = JianContextApp<TestContext>(name: "demo").callback(configureContext)
+            .add(JianContextApp<TestContext>(name: "child").callback(childContext).add(recordContext), name: "child")
 
         // act
         let code = app.run(["--stop=9", "child", "record-context", "hello"], context: TestContext(trace))
@@ -158,8 +158,8 @@ class ContextTest {
         let firstContext = TestContext(first)
         let secondContext = TestContext(second)
         firstContext.enabled = true
-        let app = JianContextApp<TestContext>(name: "demo").add(RecordContextCommand())
-        let otherApp = JianContextApp<TestContext>(name: "demo").add(RecordContextCommand())
+        let app = JianContextApp<TestContext>(name: "demo").add(recordContext)
+        let otherApp = JianContextApp<TestContext>(name: "demo").add(recordContext)
 
         // act
         app.run(["record-context", "one"], context: firstContext)
@@ -178,8 +178,8 @@ class ContextTest {
         let context = TestContext(trace)
 
         // act
-        configureContext(ctx: context, trace: trace, enabled: true)
-        let code = recordContext("direct", trace: trace, enabled: context.enabled, optional: None)
+        configureContext.call(ctx: context, trace: trace, enabled: true)
+        let code = recordContext.call("direct", trace: trace, enabled: context.enabled, optional: None)
 
         // assert
         @Expect(code, 7)
@@ -190,7 +190,7 @@ class ContextTest {
     func injectionAfterVariadicArgumentUsesPrimaryConstructorFields() {
         // arrange
         let trace = ContextTrace()
-        let command = ContextFilesCommand()
+        let command = contextFiles
 
         // act
         let code = command.run(JianArgCursor(["a", "b"]), PrimaryContext(trace))
@@ -219,7 +219,7 @@ class ContextTest {
         let errors = ByteBuffer()
         let trace = ContextTrace()
         let app = JianContextApp<TestContext>(name: "demo", stderr: errors)
-            .add(JianContextApp<TestContext>(name: "child").add(RecordContextCommand()), name: "child")
+            .add(JianContextApp<TestContext>(name: "child").add(recordContext), name: "child")
 
         // act
         let code = app.run(["child", "record-context", "hello", "--enabled"], context: TestContext(trace))
@@ -236,7 +236,7 @@ class ContextTest {
         // arrange
         let trace = ContextTrace()
         let context = TestContext(trace)
-        let app = JianContextApp<TestContext>(name: "demo").callback(ConfigureContextCallback())
+        let app = JianContextApp<TestContext>(name: "demo").callback(configureContext)
 
         // act
         let code = app.run(["--enabled"], context: context)
@@ -253,7 +253,7 @@ class ContextTest {
         let trace = ContextTrace()
         trace.events = "existing"
         let context = TestContext(trace)
-        let command = ContextDefaultCommand()
+        let command = contextDefault
 
         // act
         command.run(JianArgCursor([]), context)
@@ -270,7 +270,7 @@ class ContextTest {
         // arrange
         let context = TestContext(ContextTrace())
         let errors = ByteBuffer()
-        let app = JianContextApp<TestContext>(name: "demo", stderr: errors).add(ContextFailureCommand())
+        let app = JianContextApp<TestContext>(name: "demo", stderr: errors).add(contextFailure)
 
         // act
         let error = @AssertThrows[IllegalStateException](app.run(["context-failure"], context: context))

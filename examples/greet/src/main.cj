@@ -2,9 +2,7 @@ package greet_example
 
 import jian.*
 
-let app = JianApp(name: "demo", help: "A first jian CLI.")
-
-@JianCommand[app: app, help: "Greet someone."]
+@JianCommand[help: "Greet someone."]
 func greet(
     name!: String = JianArgument(help: "Name to greet"),
     times!: Int64 = JianOption(short: 't', help: "Repetitions", default: 1),
@@ -15,5 +13,7 @@ func greet(
         println(if (loud) { message.toAsciiUpper() } else { message })
     }
 }
+
+let app = JianApp(name: "demo", help: "A first jian CLI.").add(greet)
 
 main(args: Array<String>): Int64 { app.run(args) }
