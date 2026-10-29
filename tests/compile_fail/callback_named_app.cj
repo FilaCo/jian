@@ -3,4 +3,4 @@ package fixture
 import jian.*
 let app = JianApp()
 @JianCallback[app: app]
-func bad(): Unit {}
+func bad(): JianCallbackResult { JianCallbackResult.Continue }

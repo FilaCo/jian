@@ -130,8 +130,9 @@ let app = JianApp(name: "demo")
     .add(users, name: "admins", help: "Administrator management.")
 
 @JianCallback[app]
-func configure(verbose!: Bool = false): Unit {
+func configure(verbose!: Bool = false): JianCallbackResult {
     if (verbose) { println("Verbose mode enabled") }
+    JianCallbackResult.Continue
 }
 ```
 
@@ -161,8 +162,11 @@ cjpm run -- project deploy --help
 ```
 
 App options go before the subcommand; options after it belong to that command
-or sub-app. Callbacks run before the selected command. A nonzero callback exit
-code stops dispatch. A callback-only app may run without a subcommand.
+or sub-app. Callbacks return `JianCallbackResult`: `Continue` proceeds to the
+selected command, while `Exit(code)` returns immediately from `app.run`, including
+`Exit(0)`. The return type may be inferred. A callback-only app may run without
+a subcommand. See [callback completion](docs/applications.md#callback-completion)
+for options such as `--config-schema` that complete without a subcommand.
 
 ## Typed context
 
@@ -180,8 +184,9 @@ class AppContext {
 let app = JianContextApp<AppContext>(name: "demo")
 
 @JianCallback[app]
-func configure(ctx!: AppContext = JianFromContext<AppContext>(), verbose!: Bool = false): Unit {
+func configure(ctx!: AppContext = JianFromContext<AppContext>(), verbose!: Bool = false): JianCallbackResult {
     ctx.logger.verbose = verbose
+    JianCallbackResult.Continue
 }
 
 @JianCommand[app]
@@ -237,8 +242,10 @@ help for a nested target.
 
 | Result | Behavior |
 | --- | --- |
-| Command or callback returns `Unit` | Exit code `0` |
-| Command or callback returns `Int64` | Use that code |
+| Command returns `Unit` | Exit code `0` |
+| Command returns `Int64` | Use that code |
+| Callback returns `JianCallbackResult.Continue` | Continue dispatch |
+| Callback returns `JianCallbackResult.Exit(code)` | Return that code immediately |
 | Help requested | Print help to stdout, return `0` |
 | `JianUsageException` | Print error and usage to stderr, return `2` |
 | Other exception | Propagate to the caller |
@@ -254,6 +261,7 @@ Run it from its directory with `cjpm run -- ...`.
 
 | Example | Demonstrates | Arguments |
 | --- | --- | --- |
+| [callback_exit](examples/callback_exit/src/main.cj) | Successful callback completion alongside subcommands | `--config-schema` or `fetch-src` |
 | [greet](examples/greet/src/main.cj) | Arguments, defaults, flags and short clusters | `greet Alice -lt2` |
 | [sync](examples/sync/src/main.cj) | Variadic paths, repeated options, optional values | `sync src docs -nj4 -x target --exclude=.git` |
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |
@@ -275,8 +283,8 @@ example. The repository's `pre-push` hook runs the same suite.
 - No environment-variable defaults or automatic enum parsers. Enums can implement
   `JianArgValue<T>` explicitly.
 - Help is explicit (`help:`); doc comments are not extracted.
-- Generic command and callback functions are rejected. Written return types must
-  be `Unit` or `Int64`; inferred return types must satisfy the same runtime contract.
+- Generic command and callback functions are rejected. Commands return `Unit` or
+  `Int64`; callbacks return `JianCallbackResult`. Return types may be inferred.
 - A variadic argument must be the final positional argument. Only one overload of
   a given function name can carry each command or callback macro, because generated
   adapter names come from the function name.

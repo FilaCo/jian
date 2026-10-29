@@ -9,8 +9,9 @@ let app = JianApp(name: "demo", help: "A CLI with a nested app.")
     .add(deploy)
 
 @JianCallback[app]
-func configure(verbose!: Bool = JianOption(short: 'v', help: "Verbose output", default: false)): Unit {
+func configure(verbose!: Bool = JianOption(short: 'v', help: "Verbose output", default: false)): JianCallbackResult {
     if (verbose) { println("Verbose mode enabled") }
+    JianCallbackResult.Continue
 }
 
 main(args: Array<String>): Int64 { app.run(args) }

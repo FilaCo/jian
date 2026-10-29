@@ -16,8 +16,9 @@ func create(name: String): Unit {
 }
 
 @JianCallback[app]
-func configure(verbose!: Bool = false): Unit {
+func configure(verbose!: Bool = false): JianCallbackResult {
     if (verbose) { println("Verbose mode enabled") }
+    JianCallbackResult.Continue
 }
 
 main(args: Array<String>): Int64 { app.run(args) }
@@ -68,6 +69,45 @@ The generated adapter remains available as `CreateCommand()` (or
 The registration tag types are implementation details; ordinary calls do not
 supply them.
 
+## Callback completion
+
+Callbacks must return `JianCallbackResult`. The return type may be inferred from
+`Continue` or `Exit(code)`; `Unit` and `Int64` are not accepted. Commands continue
+to return `Unit` or `Int64`.
+
+Use `Continue` for ordinary setup. Use `Exit(code)` to return immediately from
+`app.run`, before selecting a command or requiring its name. `Exit(0)` permits
+options such as `--config-schema` alongside named subcommands:
+
+```cangjie
+@JianCallback[app]
+func configure(configSchema!: Bool = false) {
+    if (configSchema) {
+        printConfigSchema()
+        return JianCallbackResult.Exit(0)
+    }
+    JianCallbackResult.Continue
+}
+```
+
+Here `printConfigSchema()` is application code. `demo --config-schema` completes
+successfully without a subcommand. `demo --config-schema fetch-src` also completes
+without invoking `fetch-src`. `demo fetch-src` proceeds to that command normally.
+An `Exit` skips all remaining dispatch, including validation of a subcommand name
+or its inputs. With `Continue`, missing and unknown commands retain their usual
+errors; a callback-only app still succeeds without a command.
+
+This is ordinary callback execution: its arguments and options are parsed and
+validated before its body runs. Required callback inputs must still be supplied.
+`--help` and `-h` show help without invoking the target callback. Ancestor callbacks
+may already have run for nested help.
+
+For nested apps, `Exit(code)` returns through the root `run`; later callbacks,
+commands and child context projections are skipped. The library does not terminate
+the process or close the caller's streams. A thrown `JianUsageException` produces
+the normal usage error and code 2; other exceptions propagate to the caller.
+See the runnable [callback exit example](../examples/callback_exit/src/main.cj).
+
 ## Mounts
 
 ```cangjie
@@ -94,8 +134,9 @@ demo --verbose users --tenant acme create Alice --force
 ```
 
 Here `--verbose` belongs to the root callback, `--tenant` to the users callback,
-and `--force` to the command. Callbacks run root to leaf; a nonzero result stops
-execution. Help skips its target, although ancestor callbacks may have run.
+and `--force` to the command. Callbacks run root to leaf; `Continue` proceeds
+with dispatch and `Exit(code)` stops execution, including code 0. Help skips its
+target, although ancestor callbacks may have run.
 Nested help and errors use the full mount path and the root's output streams.
 
 ## Files and packages

@@ -14,7 +14,9 @@ private func registeredDefault(): Int64 {
 func registeredLazy(value!: Int64 = registeredDefault()): Int64 { value }
 
 @JianCallback[registeredUsers]
-func registeredSettings(stop!: Int64 = 0): Int64 { stop }
+func registeredSettings(stop!: Int64 = 0): JianCallbackResult {
+    if (stop == 0) { JianCallbackResult.Continue } else { JianCallbackResult.Exit(stop) }
+}
 
 @JianCommand[registeredUsers, help: "Add two numbers"]
 func registeredAdd(value: Int64, amount!: Int64 = 4): Int64 { value + amount }

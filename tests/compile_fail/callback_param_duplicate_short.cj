@@ -4,4 +4,4 @@ package fixture
 import jian.*
 
 @JianCallback
-func example(verbose!: Bool = JianOption(short: 'v'), version!: Bool = JianOption(short: 'v')) {}
+func example(verbose!: Bool = JianOption(short: 'v'), version!: Bool = JianOption(short: 'v')): JianCallbackResult { JianCallbackResult.Continue }

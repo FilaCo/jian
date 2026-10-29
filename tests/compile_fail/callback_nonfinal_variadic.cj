@@ -4,4 +4,4 @@ package fixture
 import jian.*
 
 @JianCallback
-func example(files: Array<String>, destination: String): Unit {}
+func example(files: Array<String>, destination: String): JianCallbackResult { JianCallbackResult.Continue }

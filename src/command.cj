@@ -50,7 +50,13 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     if (declaration.colon.kind == TokenKind.COLON) {
         let result = declaration.declType.toTokens()
         let spelling = result.toString().replace(" ", "")
-        if (spelling != "Unit" && spelling != "Int64") {
+        if (callback && spelling != "JianCallbackResult") {
+            diagReport(DiagReportLevel.ERROR, result,
+                "@JianCallback return type must be JianCallbackResult",
+                "return JianCallbackResult.Continue or JianCallbackResult.Exit(code)")
+            return input
+        }
+        if (!callback && spelling != "Unit" && spelling != "Int64") {
             diagReport(DiagReportLevel.ERROR, result,
                 "@Jian${suffix} return type must be Unit or Int64", "omit the return type to let the compiler infer it")
             return input
@@ -280,6 +286,9 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     let tagToken = Token(TokenKind.IDENTIFIER, interfaceToken.value + "Tag")
     let tagType = if (contextType.size == 0) { quote($(tagToken)) }
         else { quote($(tagToken)<$(contextType)>) }
+    let returnType = if (callback) { quote(JianCallbackResult) } else { quote(Int64) }
+    let invocation = quote($(implementation)($(arguments)))
+    let result = if (callback) { invocation } else { quote(jianExitCode($(invocation))) }
     declaration.identifier = implementation
     declaration.modifiers.clear()
     declaration.modifiers.add(Modifier(Token(TokenKind.PRIVATE)))
@@ -295,7 +304,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         $(visibility) class $(className) <: $(interfaceName) {
             $(commandName)
             public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)]) } }
-            public func run(__jian_args: JianArgCursor $(contextArgument)): Int64 {
+            public func run(__jian_args: JianArgCursor $(contextArgument)): $(returnType) {
                 $(storage)
                 var __jian_position = 0
                 while (let Some(__jian_arg) <- __jian_args.peek()) {
@@ -327,7 +336,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
                     throw JianUsageException.unknownOption("--" + __jian_name)
                 }
                 $(bindings)
-                jianExitCode($(implementation)($(arguments)))
+                $(result)
             }
         }
     ) + registration

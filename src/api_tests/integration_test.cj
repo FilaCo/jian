@@ -10,8 +10,9 @@ private var integrationEvents = ""
 @JianCallback[help: "Workspace options"]
 func integrationGlobal(verbose!: Bool = JianOption(short: 'v', help: "Verbose workspace", default: false),
     jobs!: Int64 = JianOption(short: 'j', default: 1),
-    paths!: Array<String> = JianOption(short: 'p', hidden: true, default: [])): Unit {
+    paths!: Array<String> = JianOption(short: 'p', hidden: true, default: [])): JianCallbackResult {
     integrationEvents += "global:${verbose}:${jobs}:${paths};"
+    JianCallbackResult.Continue
 }
 
 @JianCommand[help: "Process input paths"]
@@ -22,8 +23,9 @@ func integrationFiles(paths!: Array<String> = JianArgument(help: "Input paths", 
 }
 
 @JianCallback
-func integrationArguments(values!: Array<String> = JianArgument(help: "Arguments", default: [])): Unit {
+func integrationArguments(values!: Array<String> = JianArgument(help: "Arguments", default: [])): JianCallbackResult {
     integrationEvents = values.toString()
+    JianCallbackResult.Continue
 }
 
 @Test

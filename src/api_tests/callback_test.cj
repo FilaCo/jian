@@ -15,8 +15,9 @@ private func callbackDefault(): String {
 }
 
 @JianCallback[help: "Global settings"]
-func configure(verbose!: Bool = false, jobs!: ?Int64, paths!: Array<String> = []): Unit {
+func configure(verbose!: Bool = false, jobs!: ?Int64, paths!: Array<String> = []): JianCallbackResult {
     callbackEvents += "callback:${verbose}:${jobs ?? -1}:${paths.size};"
+    JianCallbackResult.Continue
 }
 
 @JianCommand
@@ -26,24 +27,50 @@ func launch(verbose!: Bool = false): Int64 {
 }
 
 @JianCallback
-func configuredDefault(first!: String = callbackDefault(), second!: String = callbackPrefix + first): Int64 {
+func configuredDefault(first!: String = callbackDefault(), second!: String = callbackPrefix + first): JianCallbackResult {
     callbackEvents = second
-    0
+    JianCallbackResult.Continue
 }
 
 @JianCallback
-func callbackExit(code!: Int64): Int64 { code }
+func callbackExit(code!: Int64): JianCallbackResult { JianCallbackResult.Exit(code) }
 
 @JianCallback
-func callbackPosition(workspace: String, count!: Int64 = 1): Unit {
+func callbackFailure(): JianCallbackResult { throw IllegalStateException("callback failed") }
+
+@JianCallback
+func inferredCallback(complete!: Bool = false) {
+    if (complete) { JianCallbackResult.Exit(0) } else { JianCallbackResult.Continue }
+}
+
+@JianCallback
+func callbackPosition(workspace: String, count!: Int64 = 1): JianCallbackResult {
     callbackEvents = "${workspace}:${count}"
+    JianCallbackResult.Continue
 }
 
 @JianCallback
-func `empty_callback`() { callbackEvents = "empty" }
+func `empty_callback`(): JianCallbackResult { callbackEvents = "empty"; JianCallbackResult.Continue }
 
 @Test
 class CallbackMacroTest {
+    @TestCase
+    func inferredResultSupportsDirectCallsAndTypedRegistration() {
+        // arrange
+        let app = JianApp().callback(inferredCallback).add(launch)
+        let action: (Bool) -> JianCallbackResult = inferredCallback
+
+        // act
+        let continued = app.run(["launch"])
+        let completed = app.run(["--complete"])
+
+        // assert
+        @Expect(continued, 7)
+        @Expect(completed, 0)
+        @Expect(inferredCallback(), JianCallbackResult.Continue)
+        @Expect(action(true), JianCallbackResult.Exit(0))
+    }
+
     @TestCase
     func appRunsTypedCallbackBeforeCommandAndKeepsCommandOptions() {
         // arrange
@@ -108,25 +135,54 @@ class CallbackMacroTest {
         // assert
         @Expect(metadata.inputs[0].defaultShown.isSome(), true)
         @Expect(callbackDefaultCalls, 0)
-        @Expect(explicit, 0)
+        @Expect(explicit, JianCallbackResult.Continue)
         @Expect(callbackEvents, "private:given")
-        @Expect(callback.run(JianArgCursor([])), 0)
+        @Expect(callback.run(JianArgCursor([])), JianCallbackResult.Continue)
         @Expect(callbackDefaultCalls, 1)
         @Expect(callbackEvents, "private:default")
     }
 
-    @TestCase
-    func nonzeroCallbackResultPreventsCommandDispatch() {
+    @TestCase[exitCode in [0, 9]]
+    func explicitCallbackExitPreventsCommandDispatch(exitCode: Int64) {
         // arrange
         callbackEvents = ""
         let app = JianApp(name: "demo").callback(callbackExit).add(launch)
 
         // act
-        let code = app.run(["--code=9", "launch"])
+        let code = app.run(["--code=${exitCode}", "launch"])
 
         // assert
-        @Expect(code, 9)
+        @Expect(code, exitCode)
         @Expect(callbackEvents, "")
+    }
+
+    @TestCase
+    func successfulCallbackExitDoesNotRequireASubcommand() {
+        // arrange
+        let errors = ByteBuffer()
+        let app = JianApp(name: "demo", stderr: errors).callback(callbackExit).add(launch)
+
+        // act
+        let code = app.run(["--code=0"])
+
+        // assert
+        @Expect(code, 0)
+        @Expect(errors.bytes().isEmpty(), true)
+        @Expect(callbackExit(code: 0), JianCallbackResult.Exit(0))
+    }
+
+    @TestCase
+    func callbackExceptionsPropagateWithoutBecomingUsageErrors() {
+        // arrange
+        let errors = ByteBuffer()
+        let app = JianApp(name: "demo", stderr: errors).callback(callbackFailure).add(launch)
+
+        // act
+        let error = @AssertThrows[IllegalStateException](app.run(["launch"]))
+
+        // assert
+        @Expect(error.message, "callback failed")
+        @Expect(errors.bytes().isEmpty(), true)
     }
 
     @TestCase
@@ -138,7 +194,7 @@ class CallbackMacroTest {
         let code = CallbackPositionCallback().run(args)
 
         // assert
-        @Expect(code, 0)
+        @Expect(code, JianCallbackResult.Continue)
         @Expect(callbackEvents, "project:2")
         @Expect(args.next(), Some(JianArg.Operand("launch")))
         @Expect(args.next(), Some(JianArg.Long("verbose")))
@@ -153,7 +209,7 @@ class CallbackMacroTest {
         let code = Empty_callbackCallback().run(args)
 
         // assert
-        @Expect(code, 0)
+        @Expect(code, JianCallbackResult.Continue)
         @Expect(callbackEvents, "empty")
         @Expect(args.remaining(), ["--", "launch", "--verbose"])
         @Expect(JianApp(name: "demo").callback(`empty_callback`).run([]), 0)
