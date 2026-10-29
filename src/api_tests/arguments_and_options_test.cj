@@ -120,8 +120,9 @@ func requiredArray(values!: Array<Int64> = JianArgument()): Int64 { values.size 
 @JianCallback
 func markerConfigure(workspace!: String = JianArgument(help: "Workspace"),
     verbose!: Bool = JianOption(short: 'v', default: false),
-    count!: Int64 = JianOption(short: 'c', default: 1)): Unit {
+    count!: Int64 = JianOption(short: 'c', default: 1)): JianCallbackResult {
     markerObserved = "${workspace}:${verbose}:${count}"
+    JianCallbackResult.Continue
 }
 
 private func unprocessedOption(value!: Int64 = JianOption(help: "Value")): Int64 { value }
@@ -144,8 +145,9 @@ func optionalAliasDefault(value!: MarkerMaybeInt = JianOption(default: None)): I
 
 @JianCallback
 func optionalCallback(value!: ?Int64 = JianOption(),
-    operand!: Option<String> = JianArgument()): Unit {
+    operand!: Option<String> = JianArgument()): JianCallbackResult {
     markerObserved = "${value ?? 0}:${operand ?? "none"}"
+    JianCallbackResult.Continue
 }
 
 @Test
@@ -187,9 +189,9 @@ class ArgumentAndOptionBehaviorTest {
         @Expect(markerObserved, "0:none")
         optionalCallback(value: 5, operand: "direct")
         @Expect(markerObserved, "5:direct")
-        @Expect(callback.run(JianArgCursor([])), 0)
+        @Expect(callback.run(JianArgCursor([])), JianCallbackResult.Continue)
         @Expect(markerObserved, "0:none")
-        @Expect(callback.run(JianArgCursor(["cli", "--value=3"])), 0)
+        @Expect(callback.run(JianArgCursor(["cli", "--value=3"])), JianCallbackResult.Continue)
         @Expect(markerObserved, "3:cli")
     }
 

@@ -19,7 +19,7 @@ func helpMarkers(files!: Array<String> = JianArgument(help: "Input files."),
 
 @JianCallback[help: "Global settings."]
 func helpSettings(workspace!: String = JianArgument(help: "Workspace."),
-    verbose!: Bool = JianOption(short: 'v', default: false)): Unit {
+    verbose!: Bool = JianOption(short: 'v', default: false)): JianCallbackResult {
     throw IllegalStateException("help executed '${workspace}' ${verbose}")
 }
 

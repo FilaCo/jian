@@ -18,8 +18,9 @@ let composedApp = JianContextApp<ParentContext>(name: "demo")
     .add(composedChild, name: "users")
 
 @JianCallback[composedApp]
-func replaceChild(parent!: ParentContext = JianFromContext<ParentContext>()): Unit {
+func replaceChild(parent!: ParentContext = JianFromContext<ParentContext>()): JianCallbackResult {
     if (let Some(replacement) <- parent.replacement) { parent.child = replacement }
+    JianCallbackResult.Continue
 }
 
 @Test

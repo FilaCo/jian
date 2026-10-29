@@ -7,6 +7,8 @@ import std.ast.*
  * An optional positional app registers the callback; a second callback is rejected.
  * Without an app, register the function explicitly with app.callback(configure).
  * Parses declared positional arguments and options, stopping before the command name.
+ * Returns JianCallbackResult: Continue dispatches, Exit(code) returns from app.run.
+ * The return type may be inferred; exceptions propagate through app.run.
  * Supports the same value types, defaults and `help` setting as `@JianCommand`.
  * JianFromContext<C>() parameters receive dependencies from the context supplied to run.
  */

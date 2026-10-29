@@ -34,8 +34,9 @@ func greet(name: String, logger!: Logger = JianFromContext<UsersContext>()): Uni
 }
 
 @JianCallback[users]
-func configure(ctx!: UsersContext = JianFromContext<UsersContext>(), verbose!: Bool = false): Unit {
+func configure(ctx!: UsersContext = JianFromContext<UsersContext>(), verbose!: Bool = false): JianCallbackResult {
     ctx.verbose = verbose
+    JianCallbackResult.Continue
 }
 ```
 
@@ -115,11 +116,13 @@ between runs. Reusing an object preserves mutations; a new object gives independ
 state. The caller owns resource cleanup and synchronization for concurrent use
 of shared mutable context.
 
-Callbacks return `Unit` or `Int64` and run root to leaf. A nonzero result stops
-dispatch; mutations are not rolled back. A callback-only app can run without a
-command. Help skips the target callback/command; ancestor callbacks and context
-projections may already have run. Help returns 0, usage errors return 2, and other
-exceptions propagate.
+Callbacks return `JianCallbackResult` and run root to leaf. `Continue` proceeds
+with dispatch; `Exit(code)` returns immediately from the root `run`, including
+code 0, without entering further children or extracting their contexts. The
+return type may be inferred. Mutations are not rolled back. A callback-only app
+can run without a command. Help skips the target callback/command; ancestor
+callbacks and context projections may already have run. Help returns 0, usage
+errors return 2, and other exceptions propagate.
 
 ## Generated contracts
 

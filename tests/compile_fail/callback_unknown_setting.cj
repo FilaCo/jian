@@ -2,4 +2,4 @@
 package fixture
 import jian.*
 @JianCallback[unknown: true]
-func bad(): Unit {}
+func bad(): JianCallbackResult { JianCallbackResult.Continue }

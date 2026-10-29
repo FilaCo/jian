@@ -9,4 +9,6 @@ public func exportedCreate(first!: Int64 = 1, second!: Int64 = first + 2,
 }
 
 @JianCallback
-public func exportedConfigure(stop!: Int64 = 0): Int64 { stop }
+public func exportedConfigure(stop!: Int64 = 0): JianCallbackResult {
+    if (stop == 0) { JianCallbackResult.Continue } else { JianCallbackResult.Exit(stop) }
+}

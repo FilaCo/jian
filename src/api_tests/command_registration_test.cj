@@ -19,7 +19,9 @@ func forwardCommand(value!: Int64 = 3): Int64 { value }
 func detached(value: Int64, amount!: Int64 = 4): Int64 { value + amount }
 
 @JianCallback
-func detachedSettings(stop!: Int64 = 0): Int64 { stop }
+func detachedSettings(stop!: Int64 = 0): JianCallbackResult {
+    if (stop == 0) { JianCallbackResult.Continue } else { JianCallbackResult.Exit(stop) }
+}
 
 @JianCommand
 func lexicalDefault(first: String,
@@ -92,7 +94,7 @@ class CommandRegistrationTest {
         @Expect(explicit, 5)
         @Expect(detached(2), 6)
         @Expect(action(2, 3), 5)
-        @Expect(detachedSettings(), 0)
+        @Expect(detachedSettings(), JianCallbackResult.Continue)
         @Expect(forwardApp.run(["forward-command"]), 3)
         @Expect(forwardResult, 3)
     }

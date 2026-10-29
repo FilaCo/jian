@@ -33,11 +33,11 @@ public interface JianCallback {
 
     /**
      * Parses app options up to the subcommand, leaving it and its arguments in `args`.
-     * Invokes the callback and returns its exit code.
+     * Continue proceeds with dispatch; Exit(code) returns from app.run, including code 0.
      *
      * throws JianUsageException on a malformed command line.
      */
-    func run(args: JianArgCursor): Int64
+    func run(args: JianArgCursor): JianCallbackResult
 }
 
 /**
@@ -60,9 +60,10 @@ public interface JianContextCallback<C> {
     prop spec: JianCommandSpec
 
     /**
-     * Parses app inputs up to the command; malformed CLI input throws JianUsageException.
+     * Parses app inputs up to the command; Continue proceeds and Exit(code) stops dispatch.
+     * Malformed CLI input throws JianUsageException; other exceptions propagate.
      */
-    func run(args: JianArgCursor, context: C): Int64
+    func run(args: JianArgCursor, context: C): JianCallbackResult
 }
 
 /** Selects a command's generated registration overload. */

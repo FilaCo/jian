@@ -60,6 +60,7 @@ public class JianApp {
 
     /**
      * Runs argv excluding the executable name. Help returns 0; usage errors return 2.
+     * Callback Exit(code) returns immediately, including Exit(0); Continue dispatches.
      * Other exceptions propagate. Ancestor callbacks may run before nested help.
      * Help and usage errors use the root streams, which remain open.
      */
@@ -157,7 +158,7 @@ public class JianContextApp<C> {
 
     /**
      * Runs argv excluding the executable name with this invocation's context.
-     * Callbacks run root to leaf; a nonzero callback stops dispatch. Mutations are not rolled back.
+     * Callbacks run root to leaf; Exit(code) stops dispatch, including Exit(0). Mutations are not rolled back.
      * Help returns 0 and skips its target; ancestor callbacks may already have run.
      * Usage errors return 2 on stderr; other exceptions propagate. Streams remain open.
      * The caller owns context resources and synchronization of shared mutable state.
@@ -233,9 +234,9 @@ class AppCore<C> {
             }
             let args = JianArgCursor(argv, shortsTakingValue: valueShorts(spec))
             if (let Some(value) <- appCallback) {
-                let code = value.run(args, context)
-                if (code != 0) {
-                    return code
+                match (value.run(args, context)) {
+                    case JianCallbackResult.Continue => ()
+                    case JianCallbackResult.Exit(code) => return code
                 }
             }
             let commandName = match (args.next()) {
@@ -325,7 +326,7 @@ class PlainCommand<C> <: JianContextCommand<C> {
 class PlainCallback<C> <: JianContextCallback<C> {
     PlainCallback(private let callback: JianCallback) {}
     public prop spec: JianCommandSpec { get() { callback.spec } }
-    public func run(args: JianArgCursor, _: C): Int64 { callback.run(args) }
+    public func run(args: JianArgCursor, _: C): JianCallbackResult { callback.run(args) }
 }
 
 func valueShorts(spec: JianCommandSpec): Array<Byte> {

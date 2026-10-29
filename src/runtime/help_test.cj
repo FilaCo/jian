@@ -17,9 +17,9 @@ private class HelpCallback <: JianCallback {
     public prop spec: JianCommandSpec { get() { commandSpec } }
 
     public HelpCallback(private let commandSpec: JianCommandSpec,
-        private let action!: (JianArgCursor) -> Int64 = { _ => throw IllegalStateException("help invoked the callback") }) {}
+        private let action!: (JianArgCursor) -> JianCallbackResult = { _ => throw IllegalStateException("help invoked the callback") }) {}
 
-    public func run(args: JianArgCursor): Int64 { action(args) }
+    public func run(args: JianArgCursor): JianCallbackResult { action(args) }
 }
 
 private func greetingSpec(): JianCommandSpec {
@@ -144,7 +144,7 @@ class HelpTest {
         let app = JianApp(name: "demo", stdout: output).callback(HelpCallback(spec, action: { args =>
             @Expect(args.next(), Some(JianArg.Long("config")))
             events.add(args.nextValue("--config"))
-            0
+            JianCallbackResult.Continue
         })).add(HelpCommand("sync", JianCommandSpec(), action: { _ => events.add("sync"); 3 }))
 
         // act
@@ -167,7 +167,7 @@ class HelpTest {
             .callback(HelpCallback(spec, action: { args =>
                 @Expect(args.next(), Some(JianArg.Operand("acme")))
                 events.add("callback")
-                0
+                JianCallbackResult.Continue
             })).add(HelpCommand("sync", JianCommandSpec()))
 
         // act

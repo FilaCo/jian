@@ -27,15 +27,22 @@ type ContextAlias = TestContext
 
 @JianCallback
 func configureContext(ctx!: ContextAlias = JianFromContext<ContextAlias>(),
-    trace!: ContextTrace = JianFromContext<ContextAlias>(), enabled!: Bool = false, stop!: Int64 = 0): Int64 {
+    trace!: ContextTrace = JianFromContext<ContextAlias>(), enabled!: Bool = false, stop!: Int64 = 0): JianCallbackResult {
     ctx.enabled = enabled
     trace.events += "root;"
-    stop
+    if (stop == 0) { JianCallbackResult.Continue } else { JianCallbackResult.Exit(stop) }
 }
 
 @JianCallback
-func childContext(trace!: ContextTrace = JianFromContext<TestContext>()): Unit {
+func childContext(trace!: ContextTrace = JianFromContext<TestContext>()): JianCallbackResult {
     trace.events += "child;"
+    JianCallbackResult.Continue
+}
+
+@JianCallback
+func stopContext(trace!: ContextTrace = JianFromContext<TestContext>(), code!: Int64 = 0) {
+    trace.events += "exit;"
+    JianCallbackResult.Exit(code)
 }
 
 @JianCommand
@@ -70,7 +77,7 @@ class ContextlessTestCommand <: JianCommand {
 
 class ContextlessTestCallback <: JianCallback {
     public prop spec: JianCommandSpec { get() { JianCommandSpec() } }
-    public func run(_: JianArgCursor): Int64 { 0 }
+    public func run(_: JianArgCursor): JianCallbackResult { JianCallbackResult.Continue }
 }
 
 @Test
@@ -148,6 +155,39 @@ class ContextTest {
         // assert
         @Expect(code, 9)
         @Expect(trace.events, "root;")
+    }
+
+    @TestCase[exitCode in [0, 9]]
+    func contextualCallbackExitStopsAtTheSelectedChild(exitCode: Int64) {
+        // arrange
+        let trace = ContextTrace()
+        let errors = ByteBuffer()
+        let app = JianContextApp<TestContext>(name: "demo", stderr: errors).callback(configureContext)
+            .add(JianContextApp<TestContext>().callback(stopContext).add(recordContext), name: "child")
+
+        // act
+        let code = app.run(["child", "--code=${exitCode}"], context: TestContext(trace))
+
+        // assert
+        @Expect(code, exitCode)
+        @Expect(trace.events, "root;exit;")
+        @Expect(errors.bytes().isEmpty(), true)
+    }
+
+    @TestCase
+    func contextFreeCallbackCanExitAContextAppSuccessfully() {
+        // arrange
+        let trace = ContextTrace()
+        let errors = ByteBuffer()
+        let app = JianContextApp<TestContext>(stderr: errors).callback(callbackExit).add(recordContext)
+
+        // act
+        let code = app.run(["--code=0", "record-context", "hello"], context: TestContext(trace))
+
+        // assert
+        @Expect(code, 0)
+        @Expect(trace.events, "")
+        @Expect(errors.bytes().isEmpty(), true)
     }
 
     @TestCase

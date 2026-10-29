@@ -38,6 +38,11 @@ check custom_type 2 '' $'Error: invalid value \'green\' for \'--color\': expecte
     paint --color green
 check context 0 $'Greeting Alice\nHello, Alice!' '' --verbose people greet Alice
 check context 0 'Hello, Alice!' '' people greet Alice
+check callback_exit 0 '{"type":"object"}' '' --config-schema
+check callback_exit 0 '{"type":"object"}' '' --config-schema fetch-src
+check callback_exit 0 'Fetching source files' '' fetch-src
+check callback_exit 2 '' $'Error: missing argument \'COMMAND\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...'
+check callback_exit 2 '' $'Error: unknown command \'fetch-scr\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...' fetch-scr
 
 for manifest in "$root"/examples/*/cjpm.toml; do
     example_dir=$(dirname "$manifest")
