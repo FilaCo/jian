@@ -39,9 +39,9 @@ class HelpTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp<Unit>(name: "demo", help: "Demo CLI.", stdout: output, stderr: errors)
+        let app = JianApp(name: "demo", help: "Demo CLI.", stdout: output, stderr: errors)
             .add(HelpCommand("zebra", JianCommandSpec(help: "Last command.")))
-            .add(JianApp<Unit>(name: "admin", help: "Administration."))
+            .add(JianApp(help: "Administration."), name: "admin")
             .add(HelpCommand("greet", greetingSpec()))
 
         // act
@@ -61,7 +61,7 @@ class HelpTest {
         // arrange
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp<Unit>(name: "demo", stdout: output, stderr: errors).add(HelpCommand("greet", greetingSpec()))
+        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(HelpCommand("greet", greetingSpec()))
 
         // act
         let code = app.run(input)
@@ -83,7 +83,7 @@ class HelpTest {
         let spec = JianCommandSpec(help: "Global settings.", inputs: [
             JianInputSpec("config", kind: JianInputKind.ValueOption, metavar: "PATH", short: b'c', required: true)
         ])
-        let app = JianApp<Unit>(name: "demo", stdout: output).callback(HelpCallback(spec))
+        let app = JianApp(name: "demo", stdout: output).callback(HelpCallback(spec))
 
         // act
         let code = app.run(["--help"])
@@ -101,9 +101,9 @@ class HelpTest {
         let output = ByteBuffer()
         let childOutput = ByteBuffer()
         let errors = ByteBuffer()
-        let child = JianApp<Unit>(name: "admin", stdout: childOutput)
+        let child = JianApp(name: "admin", stdout: childOutput)
             .add(HelpCommand("sync", JianCommandSpec()))
-        let app = JianApp<Unit>(name: "demo", stdout: output, stderr: errors).add(child)
+        let app = JianApp(name: "demo", stdout: output, stderr: errors).add(child, name: "admin")
 
         // act
         let code = app.run(input)
@@ -123,7 +123,7 @@ class HelpTest {
         // arrange
         let output = ByteBuffer()
         let seen = ArrayList<String>()
-        let app = JianApp<Unit>(name: "demo", stdout: output)
+        let app = JianApp(name: "demo", stdout: output)
             .add(HelpCommand("greet", greetingSpec(), action: { args => seen.add(all: args.remaining()); 7 }))
 
         // act
@@ -141,7 +141,7 @@ class HelpTest {
         let output = ByteBuffer()
         let events = ArrayList<String>()
         let spec = JianCommandSpec(inputs: [JianInputSpec("config", kind: JianInputKind.ValueOption, metavar: "PATH", short: b'c')])
-        let app = JianApp<Unit>(name: "demo", stdout: output).callback(HelpCallback(spec, action: { args =>
+        let app = JianApp(name: "demo", stdout: output).callback(HelpCallback(spec, action: { args =>
             @Expect(args.next(), Some(JianArg.Long("config")))
             events.add(args.nextValue("--config"))
             0
@@ -163,7 +163,7 @@ class HelpTest {
         let errors = ByteBuffer()
         let events = ArrayList<String>()
         let spec = JianCommandSpec(inputs: [JianInputSpec("tenant", kind: JianInputKind.Positional, required: true)])
-        let app = JianApp<Unit>(name: "demo", stdout: output, stderr: errors)
+        let app = JianApp(name: "demo", stdout: output, stderr: errors)
             .callback(HelpCallback(spec, action: { args =>
                 @Expect(args.next(), Some(JianArg.Operand("acme")))
                 events.add("callback")
@@ -202,7 +202,7 @@ class HelpTest {
         let messages = [JianUsageException.unknownOption("--x"), JianUsageException.missingArgument("NAME"),
             JianUsageException.invalidValue("--times", "abc", "Int64")]
         let expected = ["unknown option '--x'", "missing argument 'NAME'", "invalid value 'abc' for '--times': expected Int64"]
-        let app = JianApp<Unit>(name: "demo", stdout: output, stderr: errors)
+        let app = JianApp(name: "demo", stdout: output, stderr: errors)
             .add(HelpCommand("greet", greetingSpec(), action: { _ => throw messages[index] }))
 
         // act

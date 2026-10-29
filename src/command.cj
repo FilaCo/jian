@@ -4,6 +4,7 @@ import std.ast.*
 
 /**
  * Generates a typed CLI adapter beside the command function, replacing CLI markers with real defaults.
+ * The optional app setting registers the adapter without changing the function's callable type.
  * JianFromContext<C>() parameters are injected by type and remain required in direct calls.
  */
 public macro JianCommand(attrs: Tokens, input: Tokens): Tokens {
@@ -77,13 +78,23 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
+    var app = Tokens()
+    var usedSettings: Array<String> = []
     if (attrs.size != 0) {
         let settings = CallExpr(quote(__jian_settings($(attrs))))
         for (setting in settings.arguments) {
-            if (setting.identifier.value != "help") {
-                throw ASTException("unknown Jian${suffix} setting '${setting.identifier.value}'")
+            let tokens = setting.toTokens()
+            if (tokens.size < 2 || tokens[1].kind != TokenKind.COLON) {
+                throw ASTException("Jian${suffix} settings must be named; use app: app")
             }
-            help = setting.expr.toTokens()
+            let key = setting.identifier.value
+            if (usedSettings.contains(key)) { throw ASTException("duplicate Jian${suffix} setting '${key}'") }
+            usedSettings = usedSettings.concat([key])
+            match (key) {
+                case "help" => help = setting.expr.toTokens()
+                case "app" => app = setting.expr.toTokens()
+                case _ => throw ASTException("unknown Jian${suffix} setting '${key}'")
+            }
         }
     }
     var specs = Tokens()
@@ -236,6 +247,11 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             if (let JianArg.Operand(_) <- __jian_arg) { break }
         }
     ) } else { Tokens() }
+    let registration = if (app.size == 0) { Tokens() } else if (callback) {
+        quote(let _ = ($(app)).callback($(className)());)
+    } else {
+        quote(let _ = ($(app)).add($(className)());)
+    }
     declaration.toTokens() + quote(
         $(visibility) class $(className) <: $(interfaceName) {
             $(commandName)
@@ -275,5 +291,5 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
                 jianExitCode($(functionName)($(arguments)))
             }
         }
-    )
+    ) + registration
 }

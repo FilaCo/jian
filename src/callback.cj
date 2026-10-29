@@ -4,7 +4,8 @@ import std.ast.*
 
 /**
  * Generates a typed app-level adapter that runs before a subcommand.
- * A function `configure` produces `ConfigureCallback`, registered with `JianApp.callback`.
+ * The optional app setting registers the generated callback; a second callback is rejected.
+ * Without app, a function `configure` produces `ConfigureCallback` for explicit assembly.
  * Parses declared positional arguments and options, stopping before the command name.
  * Supports the same value types, defaults and `help` setting as `@JianCommand`.
  * JianFromContext<C>() parameters receive dependencies from the context supplied to run.

@@ -8,7 +8,7 @@ are not automatically injected.
 
 ```cangjie
 @JianContext
-class AppContext {
+class UsersContext {
     public let logger: Logger
     public var verbose: Bool = false
 
@@ -23,17 +23,18 @@ There is no recursive search through nested fields or lookup by parameter name.
 
 ## Request dependencies
 
-Use `JianFromContext<C>()` as the default of a named function parameter in a
-`@JianCommand` or `@JianCallback` declaration:
+Use `JianFromContext<C>()` as the default of a named function parameter:
 
 ```cangjie
-@JianCommand
-func greet(name: String, logger!: Logger = JianFromContext<AppContext>()): Unit {
+let users = JianContextApp<UsersContext>()
+
+@JianCommand[app: users]
+func greet(name: String, logger!: Logger = JianFromContext<UsersContext>()): Unit {
     logger.greet(name)
 }
 
-@JianCallback
-func configure(ctx!: AppContext = JianFromContext<AppContext>(), verbose!: Bool = false): Unit {
+@JianCallback[app: users]
+func configure(ctx!: UsersContext = JianFromContext<UsersContext>(), verbose!: Bool = false): Unit {
     ctx.verbose = verbose
 }
 ```
@@ -48,81 +49,89 @@ All injections in one function must spell the same context type. An imported
 alias can be used consistently in all markers and app wiring. The generated
 adapter has the function's visibility, so internal functions can use internal
 context types; public functions require publicly accessible signature types.
+A command or callback with injection must match its registration app's context.
+Context-free handlers can register in either app type.
 
-The macro removes injection defaults from the original function. Explicit direct
-calls therefore supply the dependencies, including optional dependencies:
+The macro removes injection defaults from the original function. Direct calls
+therefore supply dependencies explicitly, including optional dependencies:
 
 ```cangjie
 greet("Alice", logger: logger)
 configure(ctx: context, verbose: true)
 ```
 
-Injected parameters do not create CLI inputs, storage in the argument parser,
-metadata, usage placeholders or help rows. Dependencies are extracted after CLI
-parsing, in parameter declaration order alongside other parameter bindings.
-Defaults can refer to earlier injected parameters. Extraction returns each field
-as it exists at invocation time, without caching. Class-valued fields retain
+Injected parameters create no CLI inputs, parser storage, metadata or help rows.
+Dependencies are extracted after parsing, in parameter declaration order alongside
+other bindings. Defaults can refer to earlier injected parameters. Extraction
+returns each field at invocation time, without caching. Class-valued fields retain
 object identity; other values follow Cangjie's normal value semantics.
 
-## Wire and run the app
+## Compose different contexts
 
 ```cangjie
-let context = AppContext(logger)
-let people = JianApp<AppContext>(name: "people").add(GreetCommand())
-let app = JianApp<AppContext>(name: "demo")
-    .callback(ConfigureCallback())
-    .add(people)
+@JianContext
+class AppContext {
+    public let users: UsersContext
+    public init(users: UsersContext) { this.users = users }
+}
 
-app.run(["--verbose", "people", "greet", "Alice"], context: context)
+let app = JianContextApp<AppContext>(name: "demo")
+    .add(users, name: "users")
+
+main(args: Array<String>): Int64 {
+    app.run(args, context: AppContext(UsersContext(Logger())))
+}
 ```
 
-`JianApp<C>` accepts generated `JianContextCommand<C>` and
-`JianContextCallback<C>` adapters, as well as ordinary `JianCommand` and
-`JianCallback` implementations that ignore the context. A hand-written context
-adapter exposes the usual `spec` (and command `name`) and implements
-`run(args: JianArgCursor, context: C): Int64`.
+The parent callback receives `AppContext`. On entry to `users`, the app extracts
+`UsersContext` from the parent's field, then runs the child callback and command
+with it. The parent need not expose `Logger` directly. Extraction is repeated on
+each selected entry after the parent callback, so mutations or replacement of the
+child field are visible. There is no implicit recursive field search: each mount
+checks its own parent-to-child transition.
 
-Every sub-app must be a `JianApp<C>` with the same context type, even if
-none of its functions requests a dependency. It receives the context supplied to
-the root run, full command path and root output streams. Sub-apps cannot introduce
-or replace a context. Apps without injection use `JianApp<JianNoContext>` and
-can call `run(argv)` without supplying context. `JianNoContext` is a public alias
-for `Unit`, so `JianApp<Unit>` is equivalent. These apps cannot register adapters
-requiring another context type. A mismatched command, callback or sub-app,
-a missing dependency implementation, and a `run` call without context fail to
-compile. Multiple context types in one tree are not supported in this version.
+The compile-time rule is `ChildContext <: FromParentContext<ChildContext>`, with
+the interface generated for the actual parent. The same context type is passed
+unchanged. `JianApp` children ignore their parent's context; `JianApp` parents
+cannot mount a `JianContextApp<C>`. A missing extraction, mismatched handler,
+missing dependency, or typed `run` without context fails to compile.
 
-Create and own the context outside callbacks and commands. Each `run` requires an
-explicit context; the app stores no context between calls. Reusing an object
-preserves its mutations, while supplying a new object gives independent state.
-App instances share state only when the caller deliberately supplies shared
-objects. The caller also owns resource cleanup. Concurrent runs on a shared
-mutable context need the application's own synchronization.
+When contexts live in another package, import that package with `*` for automatic
+composition. This imports the generated local composition interface as well as
+the context types. The [context example](../examples/context/src/main.cj) exercises
+separate app, handler, dependency and context packages.
 
-Callbacks receive an existing context, return `Unit` or `Int64`, and execute from
-root to leaf before the selected command. Mutations are visible to later
-callbacks and commands. A nonzero callback result stops dispatch; mutations are
-not rolled back. A callback-only app can configure context without a command.
+For explicit transformations, a typed app also supports
+`.add(child, name: "users", context: { parent: AppContext => parent.users })`.
+This evaluates the supplied projection at child entry, following the same lifetime
+rules, and is useful when automatic extraction is unsuitable.
 
-Help skips the callback or command whose help is requested; ancestor callbacks
-may already have run. No dependencies are extracted for the skipped target.
-Help returns 0. Usage errors return 2 with usage on stderr. Other exceptions
-propagate for both context-bearing and context-free apps.
+## Lifetime and execution
 
-Existing context-free applications migrate from `JianApp(name: ...)` to
-`JianApp<JianNoContext>(name: ...)`; their `run(argv)` calls stay the same.
-Applications with context use `JianApp<C>(name: ...)` and `run(argv, context: value)`.
+Create and own the context outside callbacks and commands. `JianContextApp<C>`
+requires `run(argv, context: value)` on every invocation and stores no context
+between runs. Reusing an object preserves mutations; a new object gives independent
+state. The caller owns resource cleanup and synchronization for concurrent use
+of shared mutable context.
 
-## Generated extraction contract
+Callbacks return `Unit` or `Int64` and run root to leaf. A nonzero result stops
+dispatch; mutations are not rolled back. A callback-only app can run without a
+command. Help skips the target callback/command; ancestor callbacks and context
+projections may already have run. Help returns 0, usage errors return 2, and other
+exceptions propagate.
+
+## Generated contracts
 
 `@JianContext` generates a local `FromAppContext<T>` interface with the static
 method `fromContext(context: AppContext): T`, plus an extension implementing it
-for every field type and for `AppContext` itself. Defining the interface in the
-context's package permits extensions of dependency types from other libraries.
+for every field type and for `AppContext` itself. The local interface permits
+extensions of dependency types from other libraries, including standard types.
 
 A generated static `AppContext.jianFromContext<T>(context)` method constrains
-`T <: FromAppContext<T>`. Command and callback adapters call that method, so
-context aliases work without reconstructing generated interface names. All
-extraction is checked statically; there are no runtime casts or dependency maps.
-The generated names are implementation details, and users only need
-`import jian.*` and imports for their own types.
+`T <: FromAppContext<T>`. Handlers call this method, so context aliases work
+without reconstructing generated names.
+
+A local `AppsFromAppContext` interface exports the generated mount overload on
+`JianContextApp<AppContext>`. Its defaulted parent tag distinguishes overloads for
+different parent contexts and is an implementation detail. All extraction is
+checked statically, without runtime casts or dependency maps.

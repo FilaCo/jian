@@ -1,23 +1,17 @@
 package context_example
 
 import jian.*
-import context_example.state.AppContext as Context
-import context_example.services.Logger
+import context_example.state.*
+import context_example.people.app as people
 
-@JianCallback
-func configure(ctx!: Context = JianFromContext<Context>(), verbose!: Bool = false): Unit {
-    ctx.logger.verbose = verbose
-}
+let app = JianContextApp<AppContext>(name: "demo")
+    .add(people, name: "people")
 
-@JianCommand
-func greet(name: String, logger!: Logger = JianFromContext<Context>()): Unit {
-    logger.greet(name)
+@JianCallback[app: app]
+func configure(ctx!: AppContext = JianFromContext<AppContext>(), verbose!: Bool = false): Unit {
+    ctx.people.logger.verbose = verbose
 }
 
 main(args: Array<String>): Int64 {
-    let context = Context()
-    JianApp<Context>(name: "demo")
-        .callback(ConfigureCallback())
-        .add(JianApp<Context>(name: "people").add(GreetCommand()))
-        .run(args, context: context)
+    app.run(args, context: AppContext())
 }
