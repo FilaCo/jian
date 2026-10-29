@@ -124,11 +124,3 @@ and is repeated for every run. The parent context need not recursively expose
 every dependency of its children. Each child handles injection from its own
 context. See [Typed context](context.md) and the multi-package
 [context example](../examples/context/src/main.cj).
-
-## Migration
-
-- Replace `JianApp<JianNoContext>` / `JianApp<Unit>` with `JianApp`.
-- Replace context-bearing `JianApp<C>` with `JianContextApp<C>`.
-- Move each group name from the child constructor to `.add(child, name: ...)`.
-- Prefer `@JianCommand[app: app]` and `@JianCallback[app: app]` over manual adapters.
-- Callback registration now rejects duplicates instead of replacing the callback.
