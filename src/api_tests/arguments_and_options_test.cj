@@ -53,7 +53,7 @@ class ArgumentAndOptionMarkerTest {
     @TestCase
     func parsesFlagsAndAttachedValuesFromShortClusters() {
         // arrange
-        let app = JianApp<JianNoContext>(name: "test").add(OptionMetadataCommand())
+        let app = JianApp(name: "test").add(optionMetadata)
 
         // act
         let code = app.run(["option-metadata", "-vqt3"])
@@ -212,7 +212,7 @@ class ArgumentAndOptionBehaviorTest {
     func combinesExplicitPositionalsWithInferredInputsAndShortOptions() {
         // arrange
         let command = MixedMarkersCommand()
-        let app = JianApp<JianNoContext>(name: "test").add(command)
+        let app = JianApp(name: "test").add(command)
 
         // act
         let code = app.run(["mixed-markers", "prefix", "name", "a", "-c4", "b", "--plain=yes"])
@@ -304,7 +304,7 @@ class ArgumentAndOptionBehaviorTest {
     func callbacksParseMarkerPositionalsAndShortClustersBeforeDispatch() {
         // arrange
         let callback = MarkerConfigureCallback()
-        let app = JianApp<JianNoContext>(name: "test").callback(callback).add(OptionDefaultCommand())
+        let app = JianApp(name: "test").callback(callback).add(optionDefault)
 
         // act
         let code = app.run(["project", "-vc3", "option-default"])

@@ -19,7 +19,9 @@ enum Color <: JianArgValue<Color> {
     }
 }
 
-@JianCommand[help: "Choose a paint color."]
+let app = JianApp(name: "demo")
+
+@JianCommand[app, help: "Choose a paint color."]
 func paint(color!: Color = JianOption(short: 'c', help: "red or blue")): Unit {
     match (color) {
         case Red => println("Painting red")
@@ -27,6 +29,4 @@ func paint(color!: Color = JianOption(short: 'c', help: "red or blue")): Unit {
     }
 }
 
-main(args: Array<String>): Int64 {
-    JianApp<JianNoContext>(name: "demo").add(PaintCommand()).run(args)
-}
+main(args: Array<String>): Int64 { app.run(args) }

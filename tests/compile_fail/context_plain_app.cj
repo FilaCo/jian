@@ -1,4 +1,4 @@
-// expect-error: mismatched types
+// expect-error: no matching function declaration
 package fixture
 
 import jian.*
@@ -8,4 +8,4 @@ class ContextA { public let text: String = "a" }
 class ContextB { public let text: String = "b" }
 @JianCommand
 func bad(text!: String = JianFromContext<ContextA>()): Unit {}
-func register(): Unit { JianApp<JianNoContext>(name: "demo").add(BadCommand()) }
+func register(): Unit { JianApp(name: "demo").add(bad) }

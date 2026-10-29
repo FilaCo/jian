@@ -80,8 +80,8 @@ class ContextTest {
         // arrange
         let trace = ContextTrace()
         let context = TestContext(trace)
-        let app = JianApp<TestContext>(name: "demo").callback(ConfigureContextCallback())
-            .add(JianApp<TestContext>(name: "child").callback(ChildContextCallback()).add(RecordContextCommand()))
+        let app = JianContextApp<TestContext>(name: "demo").callback(configureContext)
+            .add(JianContextApp<TestContext>(name: "child").callback(childContext).add(recordContext), name: "child")
 
         // act
         let code = app.run(["--enabled", "child", "record-context", "hello"], context: context)
@@ -98,7 +98,7 @@ class ContextTest {
         // arrange
         let output = ByteBuffer()
         let trace = ContextTrace()
-        let app = JianApp<TestContext>(name: "demo", stdout: output).add(RecordContextCommand())
+        let app = JianContextApp<TestContext>(name: "demo", stdout: output).add(recordContext)
 
         // act
         let code = app.run(["record-context", "--help"], context: TestContext(trace))
@@ -120,8 +120,8 @@ class ContextTest {
         // arrange
         let trace = ContextTrace()
         let context = TestContext(trace)
-        let app = JianApp<TestContext>(name: "demo", stdout: ByteBuffer()).callback(ConfigureContextCallback())
-            .add(JianApp<TestContext>(name: "child").callback(ChildContextCallback()).add(RecordContextCommand()))
+        let app = JianContextApp<TestContext>(name: "demo", stdout: ByteBuffer()).callback(configureContext)
+            .add(JianContextApp<TestContext>(name: "child").callback(childContext).add(recordContext), name: "child")
 
         // act
         let root = app.run(["--help"], context: context)
@@ -139,8 +139,8 @@ class ContextTest {
     func callbackExitStopsNestedDispatch() {
         // arrange
         let trace = ContextTrace()
-        let app = JianApp<TestContext>(name: "demo").callback(ConfigureContextCallback())
-            .add(JianApp<TestContext>(name: "child").callback(ChildContextCallback()).add(RecordContextCommand()))
+        let app = JianContextApp<TestContext>(name: "demo").callback(configureContext)
+            .add(JianContextApp<TestContext>(name: "child").callback(childContext).add(recordContext), name: "child")
 
         // act
         let code = app.run(["--stop=9", "child", "record-context", "hello"], context: TestContext(trace))
@@ -158,8 +158,8 @@ class ContextTest {
         let firstContext = TestContext(first)
         let secondContext = TestContext(second)
         firstContext.enabled = true
-        let app = JianApp<TestContext>(name: "demo").add(RecordContextCommand())
-        let otherApp = JianApp<TestContext>(name: "demo").add(RecordContextCommand())
+        let app = JianContextApp<TestContext>(name: "demo").add(recordContext)
+        let otherApp = JianContextApp<TestContext>(name: "demo").add(recordContext)
 
         // act
         app.run(["record-context", "one"], context: firstContext)
@@ -204,7 +204,7 @@ class ContextTest {
     @TestCase
     func contextAppAcceptsOrdinaryCommandsAndCallbacks() {
         // arrange
-        let app = JianApp<TestContext>(name: "demo").callback(ContextlessTestCallback()).add(ContextlessTestCommand())
+        let app = JianContextApp<TestContext>(name: "demo").callback(ContextlessTestCallback()).add(ContextlessTestCommand())
 
         // act
         let code = app.run(["plain"], context: TestContext(ContextTrace()))
@@ -218,8 +218,8 @@ class ContextTest {
         // arrange
         let errors = ByteBuffer()
         let trace = ContextTrace()
-        let app = JianApp<TestContext>(name: "demo", stderr: errors)
-            .add(JianApp<TestContext>(name: "child").add(RecordContextCommand()))
+        let app = JianContextApp<TestContext>(name: "demo", stderr: errors)
+            .add(JianContextApp<TestContext>(name: "child").add(recordContext), name: "child")
 
         // act
         let code = app.run(["child", "record-context", "hello", "--enabled"], context: TestContext(trace))
@@ -236,7 +236,7 @@ class ContextTest {
         // arrange
         let trace = ContextTrace()
         let context = TestContext(trace)
-        let app = JianApp<TestContext>(name: "demo").callback(ConfigureContextCallback())
+        let app = JianContextApp<TestContext>(name: "demo").callback(configureContext)
 
         // act
         let code = app.run(["--enabled"], context: context)
@@ -270,7 +270,7 @@ class ContextTest {
         // arrange
         let context = TestContext(ContextTrace())
         let errors = ByteBuffer()
-        let app = JianApp<TestContext>(name: "demo", stderr: errors).add(ContextFailureCommand())
+        let app = JianContextApp<TestContext>(name: "demo", stderr: errors).add(contextFailure)
 
         // act
         let error = @AssertThrows[IllegalStateException](app.run(["context-failure"], context: context))

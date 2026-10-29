@@ -17,6 +17,7 @@ public macro JianContext(input: Tokens): Tokens {
     }
     let context = declaration.identifier
     let contract = Token(TokenKind.IDENTIFIER, "From" + context.value.replace("`", ""))
+    let mounts = Token(TokenKind.IDENTIFIER, "AppsFrom" + context.value.replace("`", ""))
     let visibility = contextVisibility(declaration)
     var extensions = quote(
         extend $(context) <: $(contract)<$(context)> {
@@ -50,11 +51,28 @@ public macro JianContext(input: Tokens): Tokens {
             T.fromContext(context)
         }
     )))
+    // A local interface exports the extension across packages. The defaulted parent tag
+    // keeps overloads for different context specializations distinct to cjc.
     quote(
         $(visibility) interface $(contract)<T> {
             static func fromContext(context: $(context)): T
         }
-    ) + declaration.toTokens() + extensions
+        $(visibility) interface $(mounts) {
+            func add<Child>(app: JianContextApp<Child>, name!: String,
+                help!: ?String, __jian_parent!: ?$(context)): JianContextApp<$(context)>
+                where Child <: $(contract)<Child>
+        }
+    ) + declaration.toTokens() + extensions + quote(
+        extend JianContextApp<$(context)> <: $(mounts) {
+            public func add<Child>(app: JianContextApp<Child>, name!: String,
+                help!: ?String = None, __jian_parent!: ?$(context) = None): JianContextApp<$(context)>
+                where Child <: $(contract)<Child> {
+                let _ = __jian_parent
+                add(app, name: name, help: help,
+                    context: { parent: $(context) => $(context).jianFromContext<Child>(parent) })
+            }
+        }
+    )
 }
 
 func contextVisibility(declaration: Decl): Tokens {

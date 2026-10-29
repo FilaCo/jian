@@ -1,6 +1,6 @@
 # jian
 
-A Typer-like CLI framework for Cangjie: a command is a plain function, and the `@JianCommand`/`@JianCallback` macros read its declaration at compile time to generate the argument parsing for it.
+A Typer-like CLI framework for Cangjie: a command is declared as a function, and the `@JianCommand`/`@JianCallback` macros read its declaration at compile time to generate the argument parsing for it.
 
 ## Goals
 
@@ -39,7 +39,24 @@ Generated adapter names come from the user's function (`GreetCommand`,
 
 `@JianCommand` and `@JianCallback` live in the root package, a `macro package jian` (`src/*.cj`), which may export macros only — runtime API the generated code calls lives in `jian.runtime` (`src/runtime`), and the root `public import`s it so users write a single `import jian.*`. Generated code is `quote(...)` naming things unqualified, so it resolves in the *user's* package: everything it refers to must be public and imported there. A green build of the macro package proves nothing about its output; a build of a package using the macro does — test macros that way.
 
-Each macro is declared twice, attributed (`@JianCommand[help: ...]`) and plain (`@JianCommand`): cjc rejects the plain form of a macro declared only with `attrs`.
+Each macro is declared twice, attributed (`@JianCommand[app, help: ...]`) and plain (`@JianCommand`): cjc rejects the plain form of a macro declared only with `attrs`.
+
+`JianApp` has no injected context; `JianContextApp<C>` receives one per run.
+`@JianCommand[app]` and `@JianCallback[app]` preserve the function and
+register its generated adapter in the positional app. One required tag overload
+per function lets registration select the adapter by its expected function type.
+Named `app:` is rejected. Without an app, register functions explicitly via
+`.add(command)` or `.callback(configure)`. Direct invocations use `command(...)`, retaining
+parameter types and defaults. Implementations and default helpers stay at package
+scope to preserve lexical bindings independently of generated adapter members.
+Functions and registration overloads retain the original declaration visibility.
+Mount children with `.add(child, name: "users", help: "...")`; names and help overrides belong to the
+mount, not the child. Context-free children ignore the parent context. Different
+context types require `Child <: FromParentContext<Child>`, generated for direct
+fields by `@JianContext`. Its local `AppsFromParentContext` interface exports the
+mount overload across packages; import the context package with `*` for automatic
+composition. The defaulted generated parent tag distinguishes overloads on
+specializations of `JianContextApp` and is an implementation detail.
 
 Short option names are single ASCII bytes: `JianInputSpec.short` is `?Byte`,
 `JianArg.Short` carries one `Byte`, and `JianArgCursor` takes `Array<Byte>` for shorts

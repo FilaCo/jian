@@ -33,8 +33,8 @@ class MacroIntegrationTest {
         // arrange
         integrationEvents = ""
         let errors = ByteBuffer()
-        let app = JianApp<JianNoContext>(name: "test", stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+        let app = JianApp(name: "test", stderr: errors)
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-vj3", "-pa", "-p", "b", "integration-files", "first", "-vt2", "second"])
@@ -53,7 +53,7 @@ class MacroIntegrationTest {
     @TestCase
     func callbackVariadicCollectsAllOperandsWhenUsedWithoutSubcommands() {
         // arrange
-        let app = JianApp<JianNoContext>(name: "test").callback(IntegrationArgumentsCallback())
+        let app = JianApp(name: "test").callback(integrationArguments)
 
         // act
         let code = app.run(["first", "second", "--", "-third"])
@@ -67,7 +67,7 @@ class MacroIntegrationTest {
     func callbackShortValueCanEqualASubcommandName() {
         // arrange
         integrationEvents = ""
-        let app = JianApp<JianNoContext>(name: "test").callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+        let app = JianApp(name: "test").callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-p", "integration-files", "integration-files", "input"])
@@ -83,8 +83,8 @@ class MacroIntegrationTest {
         integrationEvents = ""
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp<JianNoContext>(name: "test", stdout: output, stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+        let app = JianApp(name: "test", stdout: output, stderr: errors)
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-vj3", "-h"])
@@ -107,8 +107,8 @@ class MacroIntegrationTest {
         integrationEvents = ""
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp<JianNoContext>(name: "test", stdout: output, stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+        let app = JianApp(name: "test", stdout: output, stderr: errors)
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["integration-files", "-vt2", "-h"])
@@ -129,8 +129,8 @@ class MacroIntegrationTest {
         integrationEvents = ""
         let output = ByteBuffer()
         let errors = ByteBuffer()
-        let app = JianApp<JianNoContext>(name: "test", stdout: output, stderr: errors)
-            .callback(IntegrationGlobalCallback()).add(IntegrationFilesCommand())
+        let app = JianApp(name: "test", stdout: output, stderr: errors)
+            .callback(integrationGlobal).add(integrationFiles)
 
         // act
         let code = app.run(["-p", "-h", "integration-files", "--", "-h"])

@@ -21,7 +21,7 @@ func greet(
 }
 ```
 
-The CLI accepts `greet Alice -vt3`. Register `GreetCommand()` with `JianApp<JianNoContext>`.
+The CLI accepts `greet Alice -vt3`. Use `@JianCommand[app]` to register it in a `JianApp`.
 The same declarations work under `@JianCallback` for app-level arguments and options.
 
 Cangjie requires `!` on any function parameter with a default expression.
@@ -48,7 +48,7 @@ The macros replace markers with their actual defaults. Named function parameters
 written as `?T` or `Option<T>` receive `= None` when no default is supplied.
 This applies with or without a marker, and `default: None` has the same effect.
 Nonoptional parameters without `default` remain required. The example above
-becomes an ordinary function with this signature:
+retains a function named `greet` with this signature:
 
 ```cangjie
 func greet(name!: String, times!: Int64 = 1, verbose!: Bool = false): Unit
@@ -61,7 +61,7 @@ can also be omitted in direct calls:
 @JianCommand
 func inspect(value!: ?Int64 = JianOption()) {}
 
-// The generated function has `value!: ?Int64 = None`.
+// The function has `value!: ?Int64 = None`.
 // Both inspect() and inspect(value: 3) are valid.
 ```
 

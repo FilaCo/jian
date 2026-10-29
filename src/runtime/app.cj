@@ -6,72 +6,219 @@ import std.io.OutputStream
 import std.sort.sort
 
 /**
- * Context type for apps without injected dependencies; an alias for Unit.
+ * An application without injected context. Defaults to "app" in standalone usage.
+ * Commands retain their names even when the application has only one command.
  */
-public type JianNoContext = Unit
+public class JianApp {
+    let core: AppCore<Unit>
+    public let name: String
+    public let help: String
+
+    public init(name!: String = "app", help!: String = "",
+        stderr!: OutputStream = getStdErr(), stdout!: OutputStream = getStdOut()) {
+        this.name = name
+        this.help = help
+        core = AppCore<Unit>(help, stderr, stdout)
+    }
+
+    /** Registers a function annotated with @JianCommand. */
+    public func add(factory: (JianCommandTag) -> JianCommand): JianApp {
+        add(factory(JianCommandTag()))
+    }
+
+    /**
+     * Registers a command adapter; duplicate names throw IllegalArgumentException.
+     * @JianCommand[app] generates this registration automatically.
+     */
+    public func add(command: JianCommand): JianApp {
+        core.add(PlainCommand<Unit>(command))
+        this
+    }
+
+    /**
+     * Mounts a child under name, optionally overriding its help for this path.
+     * Duplicate names and cycles throw IllegalArgumentException. The child is shared.
+     */
+    public func add(app: JianApp, name!: String, help!: ?String = None): JianApp {
+        core.mount(app.core, name, help ?? app.help, { _: Unit => () })
+        this
+    }
+
+    /** Registers a function annotated with @JianCallback. */
+    public func callback(factory: (JianCallbackTag) -> JianCallback): JianApp {
+        callback(factory(JianCallbackTag()))
+    }
+
+    /**
+     * Registers the single app callback; a second callback throws IllegalArgumentException.
+     * @JianCallback[app] generates this registration automatically.
+     */
+    public func callback(value: JianCallback): JianApp {
+        core.callback(PlainCallback<Unit>(value))
+        this
+    }
+
+    /**
+     * Runs argv excluding the executable name. Help returns 0; usage errors return 2.
+     * Other exceptions propagate. Ancestor callbacks may run before nested help.
+     * Help and usage errors use the root streams, which remain open.
+     */
+    public func run(argv: Array<String>): Int64 { core.dispatch(argv, name, core.stdout, core.stderr, ()) }
+}
 
 /**
- * A command tree sharing one concrete context type; use JianApp<JianNoContext> without injection.
- * Supply context on each run. Nested apps inherit that run's context and root output streams.
+ * An application with a concrete context supplied on every run, without retaining it.
+ * Child contexts are extracted after the parent callback, when entering the selected child.
  */
-public class JianApp<C> {
-    private let commands = ArrayList<JianContextCommand<C>>()
-    private let apps = ArrayList<JianApp<C>>()
-    private var appCallback: ?JianContextCallback<C> = None
+public class JianContextApp<C> {
+    let core: AppCore<C>
+    public let name: String
+    public let help: String
 
-    public JianApp(public let name!: String, public let help!: String = "",
-        private let stderr!: OutputStream = getStdErr(),
-        private let stdout!: OutputStream = getStdOut()) {}
+    public init(name!: String = "app", help!: String = "",
+        stderr!: OutputStream = getStdErr(), stdout!: OutputStream = getStdOut()) {
+        this.name = name
+        this.help = help
+        core = AppCore<C>(help, stderr, stdout)
+    }
+
+    /** Registers a function requiring this context, annotated with @JianCommand. */
+    public func add(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
+        add(factory(JianContextCommandTag<C>()))
+    }
+
+    /** Registers a function annotated with @JianCommand that ignores the context. */
+    public func add(factory: (JianCommandTag) -> JianCommand): JianContextApp<C> {
+        add(factory(JianCommandTag()))
+    }
 
     /**
-     * Registers a typed command; duplicate names throw IllegalArgumentException.
+     * Registers an adapter requiring this context; duplicate names throw IllegalArgumentException.
      */
-    public func add(command: JianContextCommand<C>): JianApp<C> {
-        requireAvailable(command.name)
-        commands.add(command)
+    public func add(command: JianContextCommand<C>): JianContextApp<C> {
+        core.add(command)
         this
     }
 
     /**
-     * Registers an ordinary command, which ignores the context.
+     * Registers a command that ignores the context.
      */
-    public func add(command: JianCommand): JianApp<C> { add(PlainCommand<C>(command)) }
+    public func add(command: JianCommand): JianContextApp<C> { add(PlainCommand<C>(command)) }
 
     /**
-     * Registers a sub-app of the same context type; duplicate names throw IllegalArgumentException.
+     * Mounts a child sharing this run's context. Names and help belong to the mount.
+     * Duplicate names and cycles throw IllegalArgumentException.
      */
-    public func add(app: JianApp<C>): JianApp<C> {
-        requireAvailable(app.name)
-        apps.add(app)
+    public func add(app: JianContextApp<C>, name!: String, help!: ?String = None): JianContextApp<C> {
+        core.mount(app.core, name, help ?? app.help, { context: C => context })
         this
     }
 
     /**
-     * Replaces the callback that consumes app inputs before command dispatch.
+     * Mounts a child that ignores the context, sharing the root streams.
      */
-    public func callback(value: JianContextCallback<C>): JianApp<C> {
-        appCallback = Some(value)
+    public func add(app: JianApp, name!: String, help!: ?String = None): JianContextApp<C> {
+        core.mount(app.core, name, help ?? app.help, { _: C => () })
         this
     }
 
     /**
-     * Sets an ordinary callback, which ignores the context.
+     * Mounts a child with an explicit context projection, evaluated on entry to that child.
+     * The overload without context selects typed extraction automatically.
      */
-    public func callback(value: JianCallback): JianApp<C> { callback(PlainCallback<C>(value)) }
+    public func add<D>(app: JianContextApp<D>, name!: String, help!: ?String = None,
+        context!: (C) -> D): JianContextApp<C> {
+        core.mount(app.core, name, help ?? app.help, context)
+        this
+    }
+
+    /** Registers a function requiring this context, annotated with @JianCallback. */
+    public func callback(factory: (JianContextCallbackTag<C>) -> JianContextCallback<C>): JianContextApp<C> {
+        callback(factory(JianContextCallbackTag<C>()))
+    }
+
+    /** Registers a function annotated with @JianCallback that ignores the context. */
+    public func callback(factory: (JianCallbackTag) -> JianCallback): JianContextApp<C> {
+        callback(factory(JianCallbackTag()))
+    }
 
     /**
-     * Runs argv excluding the executable name with the supplied context, without retaining it.
-     * Callbacks run from root to leaf, then the command. A nonzero callback stops dispatch;
-     * a callback-only app may run without a command. Reusing a class context preserves mutations.
-     * Help returns 0 without invoking the target; ancestor callbacks still run before nested help.
-     * JianUsageException prints an error and usage to stderr and returns 2; other exceptions propagate.
-     * stdout receives help and stderr receives usage errors; neither stream is closed.
+     * Registers the single callback; a second callback throws IllegalArgumentException.
+     */
+    public func callback(value: JianContextCallback<C>): JianContextApp<C> {
+        core.callback(value)
+        this
+    }
+
+    /**
+     * Registers a callback that ignores the context.
+     */
+    public func callback(value: JianCallback): JianContextApp<C> { callback(PlainCallback<C>(value)) }
+
+    /**
+     * Runs argv excluding the executable name with this invocation's context.
+     * Callbacks run root to leaf; a nonzero callback stops dispatch. Mutations are not rolled back.
+     * Help returns 0 and skips its target; ancestor callbacks may already have run.
+     * Usage errors return 2 on stderr; other exceptions propagate. Streams remain open.
+     * The caller owns context resources and synchronization of shared mutable state.
      */
     public func run(argv: Array<String>, context!: C): Int64 {
-        dispatch(argv, name, stdout, stderr, context)
+        core.dispatch(argv, name, core.stdout, core.stderr, context)
+    }
+}
+
+// A separate identity graph detects cycles across apps with different context types.
+class AppNode {
+    let children = ArrayList<AppNode>()
+
+    func reaches(target: AppNode): Bool {
+        refEq(this, target) || children.toArray().any({ child => child.reaches(target) })
+    }
+}
+
+interface AppMount<C> {
+    prop name: String
+    prop help: String
+    func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream, context: C): Int64
+}
+
+class ContextMount<P, C> <: AppMount<P> {
+    ContextMount(private let child: AppCore<C>, private let mountName: String,
+        private let mountHelp: String, private let convert: (P) -> C) {}
+    public prop name: String { get() { mountName } }
+    public prop help: String { get() { mountHelp } }
+
+    public func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream, context: P): Int64 {
+        child.dispatch(argv, path, output, errors, convert(context), help: help)
+    }
+}
+
+class AppCore<C> {
+    private let commands = ArrayList<JianContextCommand<C>>()
+    private let apps = ArrayList<AppMount<C>>()
+    private var appCallback: ?JianContextCallback<C> = None
+    let node = AppNode()
+
+    AppCore(let help: String, let stderr: OutputStream, let stdout: OutputStream) {}
+
+    func add(command: JianContextCommand<C>): Unit {
+        requireAvailable(command.name)
+        commands.add(command)
     }
 
-    private func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream, context: C): Int64 {
+    func callback(value: JianContextCallback<C>): Unit {
+        if (appCallback.isSome()) { throw IllegalArgumentException("duplicate callback") }
+        appCallback = Some(value)
+    }
+
+    func mount<D>(child: AppCore<D>, name: String, help: String, convert: (C) -> D): Unit {
+        requireAvailable(name)
+        if (child.node.reaches(node)) { throw IllegalArgumentException("cyclic app mount '${name}'") }
+        apps.add(ContextMount<C, D>(child, name, help, convert))
+        node.children.add(child.node)
+    }
+
+    public func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream, context: C, help!: String = this.help): Int64 {
         let spec = match (appCallback) {
             case Some(value) => value.spec
             case None => JianCommandSpec()
@@ -80,7 +227,7 @@ public class JianApp<C> {
         var usage = usageLine(path, spec, commands: hasCommands)
         try {
             if (requestsHelp(argv, spec, app: true)) {
-                output.write(appHelp(path, spec, hasCommands).toArray())
+                output.write(appHelp(path, spec, hasCommands, help).toArray())
                 output.flush()
                 return 0
             }
@@ -135,7 +282,7 @@ public class JianApp<C> {
         }
     }
 
-    private func appHelp(path: String, spec: JianCommandSpec, hasCommands: Bool): String {
+    private func appHelp(path: String, spec: JianCommandSpec, hasCommands: Bool, help: String): String {
         var text = usageLine(path, spec, commands: hasCommands)
         if (!help.isEmpty()) { text += "\n${help}\n" }
         if (!spec.help.isEmpty()) { text += "\n${spec.help}\n" }
@@ -166,16 +313,6 @@ public class JianApp<C> {
             }
         }
     }
-}
-
-/**
- * Context-free apps can run without explicitly supplying context.
- */
-extend JianApp<JianNoContext> {
-    /**
-     * Runs argv excluding the executable name; help, errors and exit codes follow JianApp.run.
-     */
-    public func run(argv: Array<String>): Int64 { run(argv, context: ()) }
 }
 
 class PlainCommand<C> <: JianContextCommand<C> {

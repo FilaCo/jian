@@ -3,7 +3,8 @@ macro package jian
 import std.ast.*
 
 /**
- * Generates a typed CLI adapter beside the command function, replacing CLI markers with real defaults.
+ * Preserves the function and generates a typed CLI adapter and registration overload.
+ * An optional app registers the command; direct calls retain parameter defaults.
  * JianFromContext<C>() parameters are injected by type and remain required in direct calls.
  */
 public macro JianCommand(attrs: Tokens, input: Tokens): Tokens {
@@ -73,17 +74,32 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         else { quote($(interfaceToken)<$(contextType)>) }
     let contextArgument = if (contextType.size == 0) { Tokens() }
         else { quote(, __jian_context: $(contextType)) }
-    let visibility = if (contextType.size == 0) { quote(public) } else { contextVisibility(declaration) }
+    let visibility = contextVisibility(declaration)
     let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
+    let implementation = Token(TokenKind.IDENTIFIER, "__jian_${suffix.toAsciiLower()}_${sourceName}")
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
+    var app = Tokens()
+    var usedSettings: Array<String> = []
     if (attrs.size != 0) {
         let settings = CallExpr(quote(__jian_settings($(attrs))))
         for (setting in settings.arguments) {
-            if (setting.identifier.value != "help") {
-                throw ASTException("unknown Jian${suffix} setting '${setting.identifier.value}'")
+            let tokens = setting.toTokens()
+            let named = tokens.size >= 2 && tokens[1].kind == TokenKind.COLON
+            if (!named && !usedSettings.isEmpty() && !usedSettings.contains("app")) {
+                throw ASTException("Jian${suffix} positional app must be the first setting")
             }
-            help = setting.expr.toTokens()
+            let key = if (named) { setting.identifier.value } else { "app" }
+            if (named && key == "app") {
+                throw ASTException("Jian${suffix} app must be positional; use @Jian${suffix}[app]")
+            }
+            if (usedSettings.contains(key)) { throw ASTException("duplicate Jian${suffix} setting '${key}'") }
+            usedSettings = usedSettings.concat([key])
+            match (key) {
+                case "help" => help = setting.expr.toTokens()
+                case "app" => app = setting.expr.toTokens()
+                case _ => throw ASTException("unknown Jian${suffix} setting '${key}'")
+            }
         }
     }
     var specs = Tokens()
@@ -93,6 +109,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     var shorts = Tokens()
     var bindings = Tokens()
     var arguments = Tokens()
+    var defaultHelpers = Tokens()
     var usedShorts = ""
     var positional = 0
     var names: Array<String> = []
@@ -145,6 +162,22 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         }
         let label = if (named) { optionLabel } else { Token(TokenKind.STRING_LITERAL, cli.toAsciiUpper()) }
         let hasDefault = declaration.funcParams[index].assign.kind == TokenKind.ASSIGN
+        let defaultName = Token(TokenKind.IDENTIFIER, "__jian_default_${sourceName}_${index}")
+        let defaultArguments = earlierArguments(declaration, index)
+        if (hasDefault) {
+            let parameters = earlierParameters(declaration, index)
+            let expression = declaration.funcParams[index].expr.toTokens()
+            // Forward every earlier binding; mark even unused ones to avoid generated-code warnings.
+            var keepBindings = Tokens()
+            for (previous in 0..index) {
+                keepBindings += quote(let _ = $(declaration.funcParams[previous].identifier);)
+            }
+            // Keep defaults outside the adapter's member scope, preserving globals such as name/spec.
+            defaultHelpers += quote(private func $(defaultName)($(parameters)): $(typeName) {
+                $(keepBindings)
+                $(expression)
+            };)
+        }
         let repeated = match (parameter.paramType as RefType) {
             case Some(reference) => reference.identifier.value == "Array" && reference.typeArguments.size == 1
             case None => false
@@ -183,7 +216,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             quote(if (jianTakesValueAs<$(typeName)>()) { JianInputKind.ValueOption } else { JianInputKind.Flag })
         } else { quote(JianInputKind.Positional) }
         let shown = if (hasDefault) {
-            let text = Token(TokenKind.STRING_LITERAL, declaration.funcParams[index].expr.toTokens().toString())
+            let text = sourceText(declaration.funcParams[index].expr.toTokens().toString())
             quote(Some($(text)))
         } else { quote(None) }
         let required = if (hasDefault) { quote(false) } else { quote(jianWhenAbsentAs<$(typeName)>().isNone()) }
@@ -221,7 +254,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             )
             positional++
         }
-        let absent = if (hasDefault) { declaration.funcParams[index].expr.toTokens() }
+        let absent = if (hasDefault) { quote($(defaultName)($(defaultArguments))) }
             else { quote(jianWhenAbsentAs<$(typeName)>() ?? throw JianUsageException.missingArgument($(label))) }
         // Bind original names in order so defaults retain their lexical dependencies.
         bindings += quote(let $(identifier): $(typeName) = $(slot) ?? ($(absent));)
@@ -236,7 +269,29 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             if (let JianArg.Operand(_) <- __jian_arg) { break }
         }
     ) } else { Tokens() }
-    declaration.toTokens() + quote(
+    let directDeclaration = FuncDecl(declaration.toTokens())
+    // Resolve the function outside adapter members such as run/name/spec.
+    declaration.block = FuncDecl(quote(func __jian_forward() { $(functionName)($(arguments)) })).block
+    for (index in 0..declaration.funcParams.size) {
+        if (declaration.funcParams[index].assign.kind == TokenKind.ASSIGN) {
+            declaration.funcParams[index] = withoutDefault(declaration.funcParams[index])
+        }
+    }
+    let tagToken = Token(TokenKind.IDENTIFIER, interfaceToken.value + "Tag")
+    let tagType = if (contextType.size == 0) { quote($(tagToken)) }
+        else { quote($(tagToken)<$(contextType)>) }
+    declaration.identifier = implementation
+    declaration.modifiers.clear()
+    declaration.modifiers.add(Modifier(Token(TokenKind.PRIVATE)))
+    let registration = if (app.size == 0) { Tokens() } else if (callback) {
+        quote(let _ = ($(app)).callback($(functionName));)
+    } else {
+        quote(let _ = ($(app)).add($(functionName));)
+    }
+    // The required tag lets registration select an adapter without changing ordinary calls.
+    directDeclaration.toTokens() + defaultHelpers + declaration.toTokens() + quote(
+        $(visibility) func $(functionName)(_: $(tagType)): $(interfaceName) { $(className)() }
+
         $(visibility) class $(className) <: $(interfaceName) {
             $(commandName)
             public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)]) } }
@@ -272,8 +327,37 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
                     throw JianUsageException.unknownOption("--" + __jian_name)
                 }
                 $(bindings)
-                jianExitCode($(functionName)($(arguments)))
+                jianExitCode($(implementation)($(arguments)))
             }
         }
-    )
+    ) + registration
+}
+
+func earlierArguments(declaration: FuncDecl, end: Int64): Tokens {
+    var result = Tokens()
+    for (index in 0..end) {
+        if (index > 0) { result += quote(,) }
+        result += quote($(declaration.funcParams[index].identifier))
+    }
+    result
+}
+
+func earlierParameters(declaration: FuncDecl, end: Int64): Tokens {
+    var result = Tokens()
+    for (index in 0..end) {
+        if (index > 0) { result += quote(,) }
+        let parameter = declaration.funcParams[index]
+        let typeName = parameter.paramType.toTokens()
+        result += quote($(parameter.identifier): $(typeName))
+    }
+    result
+}
+
+func sourceText(value: String): Tokens {
+    // Literal source text must not execute string interpolation when rendered in help metadata.
+    var bytes = Tokens()
+    for (byte in value.toArray()) {
+        bytes += quote($(Token(TokenKind.INTEGER_LITERAL, byte.toString())),)
+    }
+    quote(String.fromUtf8([$(bytes)]))
 }

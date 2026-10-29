@@ -80,7 +80,7 @@ func sumValues(values!: Array<Int64> = JianArgument(default: [])): Int64 {
 @JianCommand
 func overloaded(value: String): Int64 { value.size }
 
-func overloaded(value: Int64): Int64 { value }
+func overloaded(value: Int64): Int64 { value + 1 }
 
 @Test
 class CommandMacroTest {
@@ -116,6 +116,9 @@ class CommandMacroTest {
         @Expect(command.run(JianArgCursor([])), 0)
         @Expect(invalid.message, "invalid value 'bad' for 'VALUES': expected Int64")
         @Expect(OverloadedCommand().run(JianArgCursor(["hello"])), 5)
+        @Expect(overloaded("hello"), 5)
+        @Expect(overloaded(5), 6)
+        @Expect(JianApp().add(overloaded).run(["overloaded", "hello"]), 5)
     }
 
     @TestCase
@@ -208,7 +211,7 @@ class CommandMacroTest {
     }
 
     @TestCase
-    func namesPreserveFunctionSpellingForClassesAndUseKebabForCli() {
+    func generatedAdaptersUseKebabCaseCliNames() {
         // arrange
         let quoted = Quoted_nameCommand()
         let camel = CamelCaseCommand()

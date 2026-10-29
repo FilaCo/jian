@@ -32,6 +32,7 @@ check sync 0 $'jobs=4, dry-run=true\npath=src\npath=docs\nexclude=target\nexclud
     sync src docs -nj4 -x target --exclude=.git
 check sync 0 $'jobs=1, dry-run=false\npath=src' '' sync src
 check sub_apps 0 $'Verbose mode enabled\nDeploy to staging' '' -v project deploy staging
+check sub_apps 0 'Deploy to production' '' deploy production
 check custom_type 0 'Painting blue' '' paint --color blue
 check custom_type 2 '' $'Error: invalid value \'green\' for \'--color\': expected red or blue\nUsage: demo paint [OPTIONS]' \
     paint --color green
