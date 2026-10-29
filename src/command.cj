@@ -125,6 +125,22 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let typeName = parameter.paramType.toTokens()
         let slot = Token(TokenKind.IDENTIFIER, "__jian_value_${index}")
         let settings = parameterSettings(parameter)
+        if (settings.marker == "JianCurrentInvocation") {
+            if (!callback) { throw ASTException("JianCurrentInvocation is only supported by @JianCallback") }
+            if (typeName.toString().replace(" ", "") != "JianInvocation") {
+                throw ASTException("JianCurrentInvocation requires parameter type JianInvocation")
+            }
+            declaration.funcParams[index] = withoutDefault(parameter)
+            // Bind after the parser loop: positional inputs and option values belong to the callback.
+            bindings += quote(let $(identifier): JianInvocation = JianInvocation(requestedSubcommand:
+                match (__jian_args.peek()) {
+                    case Some(JianArg.Operand(__jian_requested)) => Some(__jian_requested)
+                    case _ => None
+                });)
+            if (index > 0) { arguments += quote(,) }
+            arguments += quote($(identifier): $(identifier))
+            continue
+        }
         if (settings.marker == "JianFromContext") {
             declaration.funcParams[index] = withoutDefault(parameter)
             bindings += quote(let $(identifier): $(typeName) = $(contextType).jianFromContext<$(typeName)>(__jian_context);)

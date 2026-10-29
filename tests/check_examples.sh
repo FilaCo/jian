@@ -41,7 +41,7 @@ check context 0 'Hello, Alice!' '' people greet Alice
 check callback_exit 0 '{"type":"object"}' '' --config-schema
 check callback_exit 0 '{"type":"object"}' '' --config-schema fetch-src
 check callback_exit 0 'Fetching source files' '' fetch-src
-check callback_exit 2 '' $'Error: missing argument \'COMMAND\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...'
+check callback_exit 0 'Running server over stdio' ''
 check callback_exit 2 '' $'Error: unknown command \'fetch-scr\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...' fetch-scr
 
 for manifest in "$root"/examples/*/cjpm.toml; do

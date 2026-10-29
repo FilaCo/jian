@@ -58,6 +58,13 @@ mount overload across packages; import the context package with `*` for automati
 composition. The defaulted generated parent tag distinguishes overloads on
 specializations of `JianContextApp` and is an implementation detail.
 
+`JianCurrentInvocation()` injects a named `JianInvocation` parameter in callbacks only;
+its marker default is removed for direct calls. It reads the next operand after
+callback parsing, without consuming it. `requestedSubcommand` is unvalidated
+(`None` for absence, `Some(name)` even for unknown names), local to the app level.
+Describe callback default actions through `help:`; usage retains `COMMAND [ARGS]...`
+for apps with commands/groups. Execution still depends on `Exit(code)` or `Continue`.
+
 Short option names are single ASCII bytes: `JianInputSpec.short` is `?Byte`,
 `JianArg.Short` carries one `Byte`, and `JianArgCursor` takes `Array<Byte>` for shorts
 requiring values. The cursor splits short clusters. `JianOption(short: 'v')`

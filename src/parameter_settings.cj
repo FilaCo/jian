@@ -23,6 +23,16 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
         case None => return settings
     }
     let marker = reference.identifier.value
+    if (marker == "JianCurrentInvocation") {
+        if (!reference.typeArguments.isEmpty() || !call.arguments.isEmpty()) {
+            throw ASTException("JianCurrentInvocation takes no type arguments or arguments")
+        }
+        if (parameter.not.kind != TokenKind.NOT) {
+            throw ASTException("JianCurrentInvocation requires a named function parameter")
+        }
+        settings.marker = marker
+        return settings
+    }
     if (marker == "JianFromContext") {
         if (reference.typeArguments.size != 1 || !call.arguments.isEmpty()) {
             throw ASTException("JianFromContext requires one context type and no arguments")
@@ -67,7 +77,7 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
 
 func isNamedCLI(parameter: FuncParam): Bool {
     let marker = parameterSettings(parameter).marker
-    marker == "JianFromContext" || parameter.not.kind == TokenKind.NOT && marker != "JianArgument"
+    marker == "JianFromContext" || marker == "JianCurrentInvocation" || parameter.not.kind == TokenKind.NOT && marker != "JianArgument"
 }
 
 func withoutDefault(parameter: FuncParam): FuncParam {
