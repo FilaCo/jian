@@ -287,7 +287,6 @@ class AppCore<C> {
         var text = usageLine(path, spec, commands: hasCommands)
         if (!help.isEmpty()) { text += "\n${help}\n" }
         if (!spec.help.isEmpty()) { text += "\n${spec.help}\n" }
-        if (let Some(action) <- spec.defaultAction) { text += "\nDefault action: ${action}\n" }
         text += parameterHelp(spec)
         let names = commands.toArray().map({ command => command.name }).concat(apps.toArray().map({ app => app.name }))
         sort(names)

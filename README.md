@@ -174,8 +174,8 @@ into the callback. After parsing its own arguments and options,
 ordinary function for the default action and return `Exit(code)`. Known and unknown
 names both produce `Some(name)`, so typos retain their normal errors after
 `Continue`. This works in both app types, independently of typed dependencies.
-`@JianCallback[defaultAction: "Run the server"]` documents the action and marks
-command selection optional in help; execution remains the callback's responsibility.
+Describe the default action with the callback's `help:` setting; usage retains
+`COMMAND [ARGS]...` for apps with registered commands or groups.
 Direct calls supply `JianInvocation` explicitly. See
 [invocation metadata and default actions](docs/applications.md#invocation-metadata-and-default-actions).
 

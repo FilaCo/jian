@@ -85,7 +85,6 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     let implementation = Token(TokenKind.IDENTIFIER, "__jian_${suffix.toAsciiLower()}_${sourceName}")
     let name = Token(TokenKind.STRING_LITERAL, cliName(sourceName))
     var help = quote("")
-    var defaultAction = quote(None)
     var app = Tokens()
     var usedSettings: Array<String> = []
     if (attrs.size != 0) {
@@ -104,9 +103,6 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             usedSettings = usedSettings.concat([key])
             match (key) {
                 case "help" => help = setting.expr.toTokens()
-                case "defaultAction" =>
-                    if (!callback) { throw ASTException("defaultAction is only supported by @JianCallback") }
-                    defaultAction = quote(Some($(setting.expr.toTokens())))
                 case "app" => app = setting.expr.toTokens()
                 case _ => throw ASTException("unknown Jian${suffix} setting '${key}'")
             }
@@ -323,7 +319,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
 
         $(visibility) class $(className) <: $(interfaceName) {
             $(commandName)
-            public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)], defaultAction: $(defaultAction)) } }
+            public prop spec: JianCommandSpec { get() { JianCommandSpec(help: $(help), inputs: [$(specs)]) } }
             public func run(__jian_args: JianArgCursor $(contextArgument)): $(returnType) {
                 $(storage)
                 var __jian_position = 0

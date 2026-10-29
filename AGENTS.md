@@ -62,8 +62,8 @@ specializations of `JianContextApp` and is an implementation detail.
 its marker default is removed for direct calls. It reads the next operand after
 callback parsing, without consuming it. `requestedSubcommand` is unvalidated
 (`None` for absence, `Some(name)` even for unknown names), local to the app level.
-`@JianCallback[defaultAction: "..."]` only describes the default action in help
-and marks command selection optional in usage; execution still requires `Exit(code)`.
+Describe callback default actions through `help:`; usage retains `COMMAND [ARGS]...`
+for apps with commands/groups. Execution still depends on `Exit(code)` or `Continue`.
 
 Short option names are single ASCII bytes: `JianInputSpec.short` is `?Byte`,
 `JianArg.Short` carries one `Byte`, and `JianArgCursor` takes `Array<Byte>` for shorts

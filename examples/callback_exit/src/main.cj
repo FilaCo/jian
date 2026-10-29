@@ -4,7 +4,7 @@ import jian.*
 
 let app = JianApp(name: "demo", help: "A CLI with a default action, an informational option and a subcommand.")
 
-@JianCallback[app, defaultAction: "Run the server over stdio."]
+@JianCallback[app, help: "Run the server over stdio when no command is requested."]
 func configure(invocation!: JianInvocation = JianCurrentInvocation(),
     configSchema!: Bool = JianOption(help: "Print the configuration schema and exit.", default: false)) {
     if (configSchema) {

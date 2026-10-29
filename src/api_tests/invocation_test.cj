@@ -8,7 +8,7 @@ import std.unittest.testmacro.*
 
 private var invocationEvents = ""
 
-@JianCallback[defaultAction: "Run the server"]
+@JianCallback[help: "Run the server when no command is requested."]
 func defaultInvocation(invocation!: JianInvocation = JianCurrentInvocation(), schema!: Bool = false) {
     invocationEvents += "${invocation.requestedSubcommand ?? "absent"};"
     if (schema) { return JianCallbackResult.Exit(0) }
@@ -199,9 +199,9 @@ class InvocationTest {
         @Expect(nested, 0)
         @Expect(command, 0)
         @Expect(invocationEvents, "mounted;mounted;invocation-command;")
-        @Expect(text.contains("Usage: demo [OPTIONS] [COMMAND [ARGS]...]"), true)
-        @Expect(text.contains("Default action: Run the server"), true)
-        @Expect(text.contains("Usage: demo mounted [OPTIONS] [COMMAND [ARGS]...]"), true)
+        @Expect(text.contains("Usage: demo [OPTIONS] COMMAND [ARGS]..."), true)
+        @Expect(text.contains("Run the server when no command is requested."), true)
+        @Expect(text.contains("Usage: demo mounted [OPTIONS] COMMAND [ARGS]..."), true)
         @Expect(childOutput.bytes().isEmpty(), true)
         @Expect(text.contains("--invocation"), false)
     }
@@ -220,20 +220,6 @@ class InvocationTest {
         @Expect(String.fromUtf8(output.bytes()).startsWith("Usage: demo [OPTIONS] COMMAND [ARGS]...\n"), true)
         @Expect(ObserveInvocationCallback().spec.inputs.size, 0)
         @Expect(ParsedInvocationCallback().spec.inputs.size, 4)
-    }
-
-    @TestCase
-    func defaultActionHelpMetadataDoesNotChangeDispatch() {
-        // arrange
-        let errors = ByteBuffer()
-        let app = JianApp(stderr: errors).callback(DefaultHelpOnlyCallback()).add(invocationCommand)
-
-        // act
-        let code = app.run([])
-
-        // assert
-        @Expect(code, 2)
-        @Expect(String.fromUtf8(errors.bytes()).contains("missing argument 'COMMAND'"), true)
     }
 
     @TestCase
@@ -375,6 +361,3 @@ class InvocationTest {
         @Expect(errors.bytes().isEmpty(), true)
     }
 }
-
-@JianCallback[defaultAction: "Documentation only"]
-func defaultHelpOnly() { JianCallbackResult.Continue }

@@ -8,9 +8,7 @@ func usageLine(path: String, spec: JianCommandSpec, commands!: Bool = false): St
             text += if (param.required) { " ${label}" } else { " [${label}]" }
         }
     }
-    if (commands) {
-        text += if (spec.defaultAction.isSome()) { " [COMMAND [ARGS]...]" } else { " COMMAND [ARGS]..." }
-    }
+    if (commands) { text += " COMMAND [ARGS]..." }
     "${text}\n"
 }
 

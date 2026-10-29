@@ -31,9 +31,8 @@ with a required tag parameter. The expected type in `.add(create)` or
 calls the function body or evaluates its defaults.
 
 The optional first positional macro argument selects the registration app;
-`help:` is a named setting; callbacks also accept `defaultAction:` for help text.
-Named `app:` is not accepted. The app must be initialized before automatic
-registration. In the same file, declare it first.
+`help:` is a named setting. Named `app:` is not accepted. The app must be
+initialized before automatic registration. In the same file, declare it first.
 A second callback or a conflicting command/group name throws
 `IllegalArgumentException` during assembly. With global registration, that error
 occurs during program initialization, before `main`.
@@ -116,7 +115,7 @@ context `C`. Use a named parameter declared as `JianInvocation` with the marker
 `JianCurrentInvocation()`:
 
 ```cangjie
-@JianCallback[app, defaultAction: "Run the server over stdio."]
+@JianCallback[app, help: "Run the server over stdio when no command is requested."]
 func configure(invocation!: JianInvocation = JianCurrentInvocation(),
     configSchema!: Bool = false) {
     if (configSchema) {
@@ -159,13 +158,11 @@ server. Callbacks keep their root-to-leaf order, completion codes and exception
 behavior. Both `JianApp` and `JianContextApp<C>` support injection, with or without
 `JianFromContext<C>()` parameters. No dependency-context changes are required.
 
-`defaultAction: "description"` is optional help metadata: app help includes a
-`Default action:` description and usage shows `[COMMAND [ARGS]...]` when commands
-are registered. It does not change execution or permit a missing command by
-itself; the callback must implement the action and return `Exit(code)`. Merely
-reading invocation metadata does not mark command selection optional. Without
-`defaultAction`, help retains its existing usage, and the callback's `help:` can
-still describe its behavior.
+Describe the default action through the callback's existing `help:` setting.
+Usage retains `COMMAND [ARGS]...` for apps with registered commands or groups;
+reading invocation metadata does not change that display. The callback determines
+whether an invocation without a command completes or produces a missing-command
+error through `Exit(code)` or `Continue`.
 
 Injection creates no CLI argument, option or help row. It is supported only by
 `@JianCallback`, requires the explicit type spelling `JianInvocation`, and takes
