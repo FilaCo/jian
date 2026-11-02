@@ -427,3 +427,65 @@ class CommandAliasesTest {
             spec: JianCommandSpec(aliases: ["child"]))))
     }
 }
+
+@Test
+class InvocationStreamsTest {
+    @TestCase
+    func plainRunOverridesNestedStreamsWithoutChangingDefaults() {
+        // arrange
+        let defaultOutput = ByteBuffer()
+        let defaultErrors = ByteBuffer()
+        let firstOutput = ByteBuffer()
+        let secondOutput = ByteBuffer()
+        let firstErrors = ByteBuffer()
+        let secondErrors = ByteBuffer()
+        let child = JianApp().add(TestCommand("sync", { _ => 0 }))
+        let app = JianApp(stdout: defaultOutput, stderr: defaultErrors).add(child, name: "admin")
+
+        // act
+        @Expect(app.run(["admin", "--help"], stdout: firstOutput), 0)
+        @Expect(app.run(["admin", "--help"], stdout: secondOutput), 0)
+        @Expect(app.run(["admin", "absent"], stderr: firstErrors), 2)
+        @Expect(app.run(["admin", "absent"], stderr: secondErrors), 2)
+
+        // assert
+        @Expect(firstOutput.bytes(), secondOutput.bytes())
+        @Expect(firstErrors.bytes(), secondErrors.bytes())
+        @Expect(defaultOutput.bytes().isEmpty(), true)
+        @Expect(defaultErrors.bytes().isEmpty(), true)
+        @Expect(app.run(["admin", "--help"]), 0)
+        @Expect(app.run(["admin", "absent"]), 2)
+        @Expect(defaultOutput.bytes(), firstOutput.bytes())
+        @Expect(defaultErrors.bytes(), firstErrors.bytes())
+    }
+
+    @TestCase
+    func contextRunOverridesNestedStreamsWithoutChangingDefaults() {
+        // arrange
+        let defaultOutput = ByteBuffer()
+        let defaultErrors = ByteBuffer()
+        let firstOutput = ByteBuffer()
+        let secondOutput = ByteBuffer()
+        let firstErrors = ByteBuffer()
+        let secondErrors = ByteBuffer()
+        let child = JianContextApp<Int64>().add(TestCommand("sync", { _ => 0 }))
+        let app = JianContextApp<Int64>(stdout: defaultOutput, stderr: defaultErrors)
+            .add(child, name: "admin")
+
+        // act
+        @Expect(app.run(["admin", "--help"], context: 42, stdout: firstOutput), 0)
+        @Expect(app.run(["admin", "--help"], context: 42, stdout: secondOutput), 0)
+        @Expect(app.run(["admin", "absent"], context: 42, stderr: firstErrors), 2)
+        @Expect(app.run(["admin", "absent"], context: 42, stderr: secondErrors), 2)
+
+        // assert
+        @Expect(firstOutput.bytes(), secondOutput.bytes())
+        @Expect(firstErrors.bytes(), secondErrors.bytes())
+        @Expect(defaultOutput.bytes().isEmpty(), true)
+        @Expect(defaultErrors.bytes().isEmpty(), true)
+        @Expect(app.run(["admin", "--help"], context: 42), 0)
+        @Expect(app.run(["admin", "absent"], context: 42), 2)
+        @Expect(defaultOutput.bytes(), firstOutput.bytes())
+        @Expect(defaultErrors.bytes(), firstErrors.bytes())
+    }
+}

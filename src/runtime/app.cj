@@ -8,17 +8,18 @@ import std.sort.sort
 /**
  * An application without injected context. Defaults to "app" in standalone usage.
  * Commands registered with add retain their names; command selects a sole root action.
+ * Set helpCommand to false to disable the synthetic help command; -h and --help remain available.
  */
 public class JianApp {
     let core: AppCore<Unit>
     public let name: String
     public let help: String
 
-    public init(name!: String = "app", help!: String = "",
+    public init(name!: String = "app", help!: String = "", helpCommand!: Bool = true,
         stderr!: OutputStream = getStdErr(), stdout!: OutputStream = getStdOut()) {
         this.name = name
         this.help = help
-        core = AppCore<Unit>(help, stderr, stdout)
+        core = AppCore<Unit>(help, stderr, stdout, helpCommand)
     }
 
     /** Selects the sole root action; incompatible with callbacks, commands and groups. */
@@ -73,25 +74,28 @@ public class JianApp {
      * Runs argv excluding the executable name. Help returns 0; usage errors return 2.
      * Callback Exit(code) returns immediately, including Exit(0); Continue dispatches.
      * Other exceptions propagate. Ancestor callbacks may run before nested help.
-     * Help and usage errors use the root streams, which remain open.
+     * Stream overrides apply to nested paths for this run only; all streams remain open.
      */
-    public func run(argv: Array<String>): Int64 { core.dispatch(argv, name, core.stdout, core.stderr, ()) }
+    public func run(argv: Array<String>, stdout!: ?OutputStream = None, stderr!: ?OutputStream = None): Int64 {
+        core.dispatch(argv, name, stdout ?? core.stdout, stderr ?? core.stderr, ())
+    }
 }
 
 /**
  * An application with a concrete context supplied on every run, without retaining it.
  * Child contexts are extracted after the parent callback, when entering the selected child.
+ * helpCommand controls this group's synthetic help command independently of mounted apps.
  */
 public class JianContextApp<C> {
     let core: AppCore<C>
     public let name: String
     public let help: String
 
-    public init(name!: String = "app", help!: String = "",
+    public init(name!: String = "app", help!: String = "", helpCommand!: Bool = true,
         stderr!: OutputStream = getStdErr(), stdout!: OutputStream = getStdOut()) {
         this.name = name
         this.help = help
-        core = AppCore<C>(help, stderr, stdout)
+        core = AppCore<C>(help, stderr, stdout, helpCommand)
     }
 
     /** Selects the sole root action requiring this run's context. */
@@ -190,11 +194,13 @@ public class JianContextApp<C> {
      * Runs argv excluding the executable name with this invocation's context.
      * Callbacks run root to leaf; Exit(code) stops dispatch, including Exit(0). Mutations are not rolled back.
      * Help returns 0 and skips its target; ancestor callbacks may already have run.
-     * Usage errors return 2 on stderr; other exceptions propagate. Streams remain open.
+     * Usage errors return 2 on stderr; other exceptions propagate.
+     * Stream overrides apply to nested paths for this run only; all streams remain open.
      * The caller owns context resources and synchronization of shared mutable state.
      */
-    public func run(argv: Array<String>, context!: C): Int64 {
-        core.dispatch(argv, name, core.stdout, core.stderr, context)
+    public func run(argv: Array<String>, context!: C, stdout!: ?OutputStream = None,
+        stderr!: ?OutputStream = None): Int64 {
+        core.dispatch(argv, name, stdout ?? core.stdout, stderr ?? core.stderr, context)
     }
 }
 
@@ -234,7 +240,8 @@ class AppCore<C> {
     private var appCallback: ?JianContextCallback<C> = None
     let node = AppNode()
 
-    AppCore(let help: String, let stderr: OutputStream, let stdout: OutputStream) {}
+    AppCore(let help: String, let stderr: OutputStream, let stdout: OutputStream,
+        private let helpCommand: Bool) {}
 
     func command(value: JianContextCommand<C>): Unit {
         requireGroup()
@@ -289,7 +296,12 @@ class AppCore<C> {
         try {
             let helpTarget: ?Array<String> = if (requestsHelp(argv, spec, app: true)) {
                 Some([])
-            } else { groupHelpTarget(argv, spec) }
+            } else {
+                let target = groupHelpTarget(argv, spec)
+                // Reject the disabled command before callbacks can perform their default action.
+                if (!helpCommand && target.isSome()) { throw JianUsageException("unknown command 'help'") }
+                target
+            }
             if (let Some(target) <- helpTarget) { validateHelpTarget(target) }
             if (helpTarget == Some([])) {
                 output.write(appHelp(path, spec, hasCommands, help).toArray())

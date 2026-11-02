@@ -45,6 +45,7 @@ Each macro is declared twice, attributed (`@JianCommand[app, help: ...]`) and pl
 `@JianCommand[app]` and `@JianCallback[app]` preserve the function and
 register its generated adapter in the positional app. One required tag overload
 per function lets registration select the adapter by its expected function type.
+Use `@JianCommand[app, root: true]` to register a sole root action without a command name.
 Named `app:` is rejected. Without an app, register functions explicitly via
 `.add(command)` or `.callback(configure)`. Direct invocations use `command(...)`, retaining
 parameter types and defaults. Implementations and default helpers stay at package
