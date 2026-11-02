@@ -388,9 +388,6 @@ func formatFile(path: String): Int64 {
 
 `APP.run(["input.cj"])` runs that action directly. `root: true` requires an app
 and cannot be combined with command names, aliases, callbacks or child commands.
-Use `helpCommand: false` when constructing an app to reject the synthetic `help`
-command while retaining `--help` and `-h`. Each mounted app controls its own
-`help` command; the name remains reserved.
 
 `run(..., stdout: out, stderr: err)` overrides output streams for one invocation,
 including nested commands and usage errors. The app keeps its configured default
