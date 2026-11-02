@@ -346,10 +346,12 @@ class ArgumentAndOptionBehaviorTest {
 @JianCommand
 func literalShorts(doubleQuoted!: Bool = JianOption(short: "d", default: false),
     rune!: Bool = JianOption(short: r'r', default: false),
-    singleQuoted!: Bool = JianOption(short: 's', default: false)): Int64 {
+    singleQuoted!: Bool = JianOption(short: 's', default: false),
+    byte!: Bool = JianOption(short: b't', default: false)): Int64 {
     (if (doubleQuoted) { 1 } else { 0 }) +
         (if (rune) { 2 } else { 0 }) +
-        (if (singleQuoted) { 4 } else { 0 })
+        (if (singleQuoted) { 4 } else { 0 }) +
+        (if (byte) { 8 } else { 0 })
 }
 
 @Test
@@ -360,8 +362,9 @@ class ShortOptionLiteralTest {
         let command = LiteralShortsCommand()
 
         // act, assert
-        @Expect(command.spec.inputs.map { input => input.short }, [Some(b'd'), Some(b'r'), Some(b's')])
-        @Expect(command.run(JianArgCursor(["-drs"])), 7)
+        @Expect(command.spec.inputs.map { input => input.short }, [Some(b'd'), Some(b'r'), Some(b's'), Some(b't')])
+        @Expect(command.run(JianArgCursor(["-drst"])), 15)
+        @Expect(command.run(JianArgCursor(["-t"])), 8)
         @Expect(command.run(JianArgCursor(["-r"])), 2)
     }
 }

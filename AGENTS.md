@@ -68,7 +68,7 @@ for apps with commands/groups. Execution still depends on `Exit(code)` or `Conti
 Short option names are single ASCII bytes: `JianInputSpec.short` is `?Byte`,
 `JianArg.Short` carries one `Byte`, and `JianArgCursor` takes `Array<Byte>` for shorts
 requiring values. The cursor splits short clusters. `JianOption(short: 'v')`
-also accepts `"v"` and `r'v'`; inspect the literal token's value rather than its
+also accepts `"v"`, `r'v'` and `b'v'`; inspect the literal token's value rather than its
 printed quotes, which the SDK macro server normalizes. It
 rejects non-ASCII short names at compile time; `-h` is reserved for help.
 

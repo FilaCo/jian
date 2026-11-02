@@ -235,8 +235,15 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             }
             let literal = shortName[0]
             let literalKind = literal.kind
-            let alias = literal.value
-            if ((literalKind != TokenKind.STRING_LITERAL &&
+            // Byte literal values retain their b'...' wrapper in the SDK token API.
+            let alias = if (literalKind == TokenKind.RUNE_BYTE_LITERAL &&
+                literal.value.size == 4 && literal.value.startsWith("b'") && literal.value.endsWith("'")) {
+                literal.value[2..3]
+            } else {
+                literal.value
+            }
+            if ((literalKind != TokenKind.RUNE_BYTE_LITERAL &&
+                literalKind != TokenKind.STRING_LITERAL &&
                 literalKind != TokenKind.SINGLE_QUOTED_STRING_LITERAL &&
                 literalKind != TokenKind.RUNE_LITERAL) ||
                 alias.size != 1 || alias.toArray()[0] > 127) {

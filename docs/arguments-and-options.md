@@ -78,7 +78,7 @@ records the default expression without the marker wrapper.
 Both markers accept named `help: String`, `hidden: Bool`, and `default` of the
 declared function parameter type. `JianOption` also accepts a single ASCII literal
 for `short`, such as
-`'v'`, `"v"` or `r'v'`. The macro reads its value, so quote normalization
+`'v'`, `"v"`, `r'v'` or `b'v'`. The macro reads its value, so quote normalization
 by an SDK macro server does not change the short name. Short names are unique
 within a command or callback, and `'h'` is reserved. Short flags can be clustered, and a value-taking
 option accepts attached or separate values (`-t3`, `-t=3`, `-t 3`).
