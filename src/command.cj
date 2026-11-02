@@ -228,16 +228,30 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let repeatable = if (repeated) { quote(true) } else { quote(false) }
         var short = quote(None)
         if (let Some(shortName) <- settings.short) {
-            let spelling = shortName.toString().trimAscii()
-            if (spelling.size != 3 || !spelling.startsWith("'") || !spelling.endsWith("'") ||
-                spelling.toArray()[1] > 127) {
+            // Literal values identify short names independently of their printed quote style.
+            if (shortName.size != 1) {
                 throw ASTException("short name must be a single ASCII character literal")
             }
-            let alias = spelling[1..2]
+            let literal = shortName[0]
+            let literalKind = literal.kind
+            // Byte literal values retain their b'...' wrapper in the SDK token API.
+            let alias = if (literalKind == TokenKind.RUNE_BYTE_LITERAL &&
+                literal.value.size == 4 && literal.value.startsWith("b'") && literal.value.endsWith("'")) {
+                literal.value[2..3]
+            } else {
+                literal.value
+            }
+            if ((literalKind != TokenKind.RUNE_BYTE_LITERAL &&
+                literalKind != TokenKind.STRING_LITERAL &&
+                literalKind != TokenKind.SINGLE_QUOTED_STRING_LITERAL &&
+                literalKind != TokenKind.RUNE_LITERAL) ||
+                alias.size != 1 || alias.toArray()[0] > 127) {
+                throw ASTException("short name must be a single ASCII character literal")
+            }
             if (alias == "h") { throw ASTException("short name '-h' is reserved for help") }
             if (usedShorts.contains(alias)) { throw ASTException("duplicate short name '-${alias}'") }
             usedShorts += alias
-            let byte = Token(TokenKind.INTEGER_LITERAL, spelling.toArray()[1].toString())
+            let byte = Token(TokenKind.INTEGER_LITERAL, alias.toArray()[0].toString())
             short = quote(Some(UInt8($(byte))))
             shorts += quote(
                 if (__jian_short == UInt8($(byte))) { __jian_name = $(cliLiteral); }
