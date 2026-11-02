@@ -92,3 +92,59 @@ in function parameter defaults; their type comes from the function parameter
 declaration.
 Runtime marker functions throw `IllegalArgumentException` if evaluated elsewhere.
 The standard `Option<T>` type remains available without aliases.
+
+### Input hooks
+
+`JianArgument` and `JianOption` accept three independent typed hooks:
+
+- `preprocess: (String) -> String` transforms each supplied raw token before the
+  existing `JianArgValue<T>.accept` conversion. It can trim text before constructing
+  a `Path`; the function parameter remains `Path`. Bare flags have no raw token,
+  so skip preprocessing; attached flag values are preprocessed normally.
+- `normalize: (T) -> T` transforms the final resolved parameter value.
+- `validate: (T) -> Unit` checks that normalized value.
+
+For example:
+
+```cangjie
+func nonblankPath(raw: String): String {
+    let text = raw.trimAscii()
+    if (text.isEmpty()) { throw JianInputException("path must not be blank") }
+    text
+}
+func validPort(port: Int64): Unit {
+    if (port < 1 || port > 65535) {
+        throw JianInputException("port must be between 1 and 65535")
+    }
+}
+@JianCommand
+func generate(model!: Path = JianArgument(preprocess: nonblankPath),
+    port!: Int64 = JianOption(default: 8080, validate: validPort)): Unit {
+    // model is already trimmed and port is valid.
+}
+```
+
+Import `std.fs.Path` for that example. Hooks accept reusable functions or typed
+lambdas, such as `normalize: { value: String => value.toAsciiLower() }`.
+Only one hook of each kind is accepted. Incompatible signatures fail compilation.
+
+Parsing accumulates arrays and selects the last occurrence of ordinary options
+before final hooks run. Normalization and validation run once per parameter, in
+signature order, including explicit defaults and implicit optional `None` values.
+An array hook receives the whole final array; an optional hook receives `?T`.
+Defaults stay lazy, and later defaults see earlier normalized bindings. Raw
+preprocessing runs for every occurrence, even a value later replaced by another.
+Missing required inputs fail before their final hooks run.
+
+Throw `JianInputException("explanation")` to reject input from any hook. The
+adapter labels the failure with the argument or option name; `JianApp.run` prints
+it with usage to stderr and returns 2. Other exceptions propagate unchanged.
+Standard conversion still reports its existing `JianInvalidValueException` errors.
+The affected callback or command body never executes after rejection. Callback
+hooks finish before that callback body and child dispatch; command hooks follow
+any parent callbacks in the ordinary dispatch lifecycle.
+
+These hooks apply only to generated CLI adapters for `@JianCommand` and
+`@JianCallback`. Ordinary direct calls retain regular defaults and skip all hooks.
+Help and metadata inspection execute neither hooks nor defaults. See the runnable
+[`input_hooks` example](../examples/input_hooks/src/main.cj).

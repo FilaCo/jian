@@ -111,6 +111,13 @@ defaults, including `JianArgument(...)`; their CLI kind is independent of direct
 function-call naming. See [Arguments and options](docs/arguments-and-options.md)
 for optional aliases, direct calls and marker constraints.
 
+Attach `preprocess: (String) -> String` to clean raw CLI text before conversion,
+`normalize: (T) -> T` to transform the final typed value, and
+`validate: (T) -> Unit` to check it. Throw `JianInputException("explanation")`
+for an input-labelled usage error (exit 2). Final hooks include defaults, optional
+`None` and accumulated arrays; direct function calls skip hooks. See
+[Input hooks](docs/arguments-and-options.md#input-hooks) for ordering and examples.
+
 ## Apps, sub-apps and callbacks
 
 Create an app before registering its commands and callback. Mount an app with an
@@ -295,6 +302,7 @@ Run it from its directory with `cjpm run -- ...`.
 | [sync](examples/sync/src/main.cj) | Variadic paths, repeated options, optional values | `sync src docs -nj4 -x target --exclude=.git` |
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |
 | [custom_type](examples/custom_type/src/main.cj) | Derived enum parsing | `paint --color blue` |
+| [input_hooks](examples/input_hooks/src/main.cj) | Raw Path normalization and typed validation | `generate " model.json " --port 9000` |
 | [context](examples/context/src/main.cj) | Typed dependencies, callback configuration and nested app | `--verbose people greet Alice` |
 
 The sync and deploy examples only print plans; they do not modify files or deploy.

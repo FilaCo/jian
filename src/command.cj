@@ -245,6 +245,38 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         specs += quote(JianInputSpec($(cliLiteral), kind: $(kind), metavar: jianMetavarAs<$(typeName)>(),
             short: $(short), help: $(inputHelp), hidden: $(hidden), defaultShown: $(shown), required: $(required), repeatable: $(repeatable)),)
         storage += quote(var $(slot): Option<$(typeName)> = None;)
+        let preprocessName = Token(TokenKind.IDENTIFIER, "__jian_preprocess_${sourceName}_${index}")
+        let finalName = Token(TokenKind.IDENTIFIER, "__jian_finalize_${sourceName}_${index}")
+        var rawValue = quote(__jian_raw)
+        var operandValue = quote(Some(__jian_operand))
+        if (let Some(hook) <- settings.preprocess) {
+            // Package scope preserves the hook's lexical binding independently of adapter members.
+            defaultHelpers += quote(private func $(preprocessName)(__jian_hook_raw: String): String {
+                let __jian_hook: (String) -> String = $(hook);
+                __jian_hook(__jian_hook_raw)
+            };)
+            rawValue = quote(match (__jian_raw) {
+                case Some(__jian_hook_raw) => Some($(preprocessName)(__jian_hook_raw))
+                case None => None
+            })
+            operandValue = quote(Some($(preprocessName)(__jian_operand)))
+        }
+        var finalSteps = Tokens()
+        if (let Some(hook) <- settings.normalize) {
+            finalSteps += quote(let __jian_normalize: ($(typeName)) -> $(typeName) = $(hook);
+                let __jian_normalized: $(typeName) = __jian_normalize(__jian_hook_value);)
+        } else { finalSteps += quote(let __jian_normalized = __jian_hook_value;) }
+        if (let Some(hook) <- settings.validate) {
+            finalSteps += quote(let __jian_validate: ($(typeName)) -> Unit = $(hook); __jian_validate(__jian_normalized);)
+        }
+        if (settings.normalize.isSome() || settings.validate.isSome()) {
+            defaultHelpers += quote(private func $(finalName)(__jian_hook_value: $(typeName)): $(typeName) {
+                try { $(finalSteps) __jian_normalized }
+                catch (__jian_error: JianInputException) {
+                    throw JianUsageException("invalid value for '" + $(label) + "': " + __jian_error.message)
+                }
+            };)
+        }
         if (named) {
             options += quote(
                 if (__jian_name == $(cliLiteral)) {
@@ -252,7 +284,9 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
                         else if (jianTakesValueAs<$(typeName)>()) { Some(__jian_args.nextValue($(optionLabel))) }
                         else { None }
                     try {
-                        $(slot) = Some(jianAcceptAs<$(typeName)>($(slot), __jian_raw))
+                        $(slot) = Some(jianAcceptAs<$(typeName)>($(slot), $(rawValue)))
+                    } catch (__jian_error: JianInputException) {
+                        throw JianUsageException("invalid value for '" + $(label) + "': " + __jian_error.message)
                     } catch (__jian_error: JianInvalidValueException) {
                         throw JianUsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
                     }
@@ -266,7 +300,9 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             operands += quote(
                 if (__jian_position == $(ordinal)) {
                     try {
-                        $(slot) = Some(jianAcceptAs<$(typeName)>($(slot), Some(__jian_operand)))
+                        $(slot) = Some(jianAcceptAs<$(typeName)>($(slot), $(operandValue)))
+                    } catch (__jian_error: JianInputException) {
+                        throw JianUsageException("invalid value for '" + $(label) + "': " + __jian_error.message)
                     } catch (__jian_error: JianInvalidValueException) {
                         throw JianUsageException.invalidValue($(label), __jian_error.raw, __jian_error.expected)
                     }
@@ -279,7 +315,11 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let absent = if (hasDefault) { quote($(defaultName)($(defaultArguments))) }
             else { quote(jianWhenAbsentAs<$(typeName)>() ?? throw JianUsageException.missingArgument($(label))) }
         // Bind original names in order so defaults retain their lexical dependencies.
-        bindings += quote(let $(identifier): $(typeName) = $(slot) ?? ($(absent));)
+        let resolved = quote($(slot) ?? ($(absent)))
+        let finalized = if (settings.normalize.isSome() || settings.validate.isSome()) {
+            quote($(finalName)($(resolved)))
+        } else { resolved }
+        bindings += quote(let $(identifier): $(typeName) = $(finalized);)
         if (index > 0) { arguments += quote(,) }
         arguments += if (functionNamed) { quote($(identifier): $(identifier)) } else { quote($(identifier)) }
     }
