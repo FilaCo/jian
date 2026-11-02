@@ -2,14 +2,15 @@ package jian.runtime
 
 import std.fs.Path
 import std.math.MaxMinValue
-import std.reflect.TypeInfo
 import std.unittest.prop_test.{Arbitrary, random}
 
 // The command macro sees only the alias name; CLI behavior must still follow the underlying type.
 type MaybeInt = ?Int64
 
 // This SDK resolves static extension members on aliases through a generic constraint.
-private func absentAs<T>(): ?T where T <: JianArgValue<T> { T.whenAbsent() }
+private func absentAs<T>(): ?T where T <: JianArgValue<T> {
+    T.whenAbsent()
+}
 
 private func expectInvalid<T>(raw: String, expected: String) where T <: JianArgValue<T> {
     let error = @AssertThrows[JianInvalidValueException](jianAcceptAs<T>(None, Some(raw)))
@@ -130,7 +131,9 @@ class ArgValueTest {
     @TestCase[expected in random()]
     @Types[T in <Int8, Int16, Int32, Int64, IntNative, UInt8, UInt16, UInt32, UInt64, UIntNative>]
     @Configure[randomSeed: 21, generationSteps: 100]
-    func integerTextRoundTrips<T>(expected: T) where T <: JianArgValue<T> & ToString & Equatable<T> & Arbitrary<T> {
+    func integerTextRoundTrips<T>(
+        expected: T
+    ) where T <: JianArgValue<T> & ToString & Equatable<T> & Arbitrary<T> {
         // arrange
         let raw = expected.toString()
 
@@ -142,26 +145,18 @@ class ArgValueTest {
     }
 
     @TestCase
-    @Types[T in <Int8, Int16, Int32, Int64, IntNative, UInt8, UInt16, UInt32, UInt64, UIntNative>]
-    func integersAcceptTheirBoundsAndRejectOverflow<T>() where T <: JianArgValue<T> & ToString & Equatable<T> & MaxMinValue<T> {
-        // arrange
-        let minimum = T.getMin()
-        let maximum = T.getMax()
-        let expectedType = TypeInfo.of<T>().name
-
-        // act
-        let low = jianAcceptAs<T>(None, Some(minimum.toString()))
-        let high = jianAcceptAs<T>(None, Some(maximum.toString()))
-
-        // assert
-        @Expect(low, minimum)
-        @Expect(high, maximum)
-        expectInvalid<T>(maximum.toString() + "0", expectedType)
-        if (minimum.toString().startsWith("-")) {
-            expectInvalid<T>(minimum.toString() + "0", expectedType)
-        } else {
-            expectInvalid<T>("-1", expectedType)
-        }
+    func integersAcceptTheirBoundsAndRejectOverflow() {
+        // Explicit names keep the error contract testable on SDKs without std.reflect (macOS).
+        expectIntegerBounds<Int8>("Int8")
+        expectIntegerBounds<Int16>("Int16")
+        expectIntegerBounds<Int32>("Int32")
+        expectIntegerBounds<Int64>("Int64")
+        expectIntegerBounds<IntNative>("IntNative")
+        expectIntegerBounds<UInt8>("UInt8")
+        expectIntegerBounds<UInt16>("UInt16")
+        expectIntegerBounds<UInt32>("UInt32")
+        expectIntegerBounds<UInt64>("UInt64")
+        expectIntegerBounds<UIntNative>("UIntNative")
     }
 
     @TestCase[expected in [1.5, -1.5, 0.0]]
@@ -181,19 +176,21 @@ class ArgValueTest {
     }
 
     @TestCase[raw in ["", "oops"]]
-    @Types[T in <Int8, Int16, Int32, Int64, IntNative, UInt8, UInt16, UInt32, UInt64, UIntNative, Float16, Float32, Float64, Bool>]
-    func invalidScalarsCarryTheRawValueAndExpectedType<T>(raw: String) where T <: JianArgValue<T> {
-        // arrange
-        let expected = TypeInfo.of<T>().name
-
-        // act
-        let error = @AssertThrows[JianInvalidValueException](jianAcceptAs<T>(None, Some(raw)))
-
-        // assert
-        @Expect(error.raw, raw)
-        @Expect(error.expected, expected)
-        @Expect(error.message.contains(raw), true)
-        @Expect(error.message.contains(expected), true)
+    func invalidScalarsCarryTheRawValueAndExpectedType(raw: String) {
+        expectInvalid<Int8>(raw, "Int8")
+        expectInvalid<Int16>(raw, "Int16")
+        expectInvalid<Int32>(raw, "Int32")
+        expectInvalid<Int64>(raw, "Int64")
+        expectInvalid<IntNative>(raw, "IntNative")
+        expectInvalid<UInt8>(raw, "UInt8")
+        expectInvalid<UInt16>(raw, "UInt16")
+        expectInvalid<UInt32>(raw, "UInt32")
+        expectInvalid<UInt64>(raw, "UInt64")
+        expectInvalid<UIntNative>(raw, "UIntNative")
+        expectInvalid<Float16>(raw, "Float16")
+        expectInvalid<Float32>(raw, "Float32")
+        expectInvalid<Float64>(raw, "Float64")
+        expectInvalid<Bool>(raw, "Bool")
     }
 
     @TestCase
@@ -233,5 +230,27 @@ class ArgValueTest {
         // assert
         @Expect(conversion.toString(), "JianInvalidValueException: invalid value 'oops': expected Int64")
         @Expect(usage.message, "invalid value 'oops' for '--times': expected Int64")
+    }
+}
+
+private func expectIntegerBounds<T>(
+    expectedType: String
+) where T <: JianArgValue<T> & ToString & Equatable<T> & MaxMinValue<T> {
+    // arrange
+    let minimum = T.getMin()
+    let maximum = T.getMax()
+
+    // act
+    let low = jianAcceptAs<T>(None, Some(minimum.toString()))
+    let high = jianAcceptAs<T>(None, Some(maximum.toString()))
+
+    // assert
+    @Expect(low, minimum)
+    @Expect(high, maximum)
+    expectInvalid<T>(maximum.toString() + "0", expectedType)
+    if (minimum.toString().startsWith("-")) {
+        expectInvalid<T>(minimum.toString() + "0", expectedType)
+    } else {
+        expectInvalid<T>("-1", expectedType)
     }
 }
