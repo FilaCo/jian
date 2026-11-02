@@ -25,6 +25,12 @@ check() {
     echo "PASS $example $*"
 }
 
+check single_command 0 'Hello, Alice!' '' Alice
+check single_command 0 $'HELLO, ALICE!\nHELLO, ALICE!' '' Alice -lt2
+check single_command 0 'Hello, help!' '' help
+check single_command 0 'Hello, -h!' '' -- -h
+check single_command 2 '' $'Error: missing argument \'NAME\'\nUsage: demo [OPTIONS] NAME'
+
 check greet 0 'Hello, Alice!' '' greet Alice
 check greet 0 $'HELLO, ALICE!\nHELLO, ALICE!' '' greet Alice -lt2
 check greet 0 'Hello, -h!' '' greet -- -h

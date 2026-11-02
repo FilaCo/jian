@@ -111,6 +111,14 @@ The word `help` is special only at an app's command boundary; arguments and
 option values belonging to a callback or selected command keep their values.
 `--help` and `-h` remain available.
 
+## Single-command CLI
+
+Use `.command(greet)` instead of `.add(greet)` to accept `demo Alice --times 2`
+directly. It runs the ordinary `@JianCommand` function as the sole action, with
+help at `demo --help` and usage `Usage: demo [OPTIONS] NAME`.
+See the [runnable example](examples/single_command/src/main.cj) and
+[configuration rules](docs/applications.md#single-command-applications).
+
 ## Parameters become arguments and options
 
 Without a marker, positional function parameters become CLI arguments and
