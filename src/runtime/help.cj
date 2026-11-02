@@ -102,3 +102,30 @@ func requestsHelp(argv: Array<String>, spec: JianCommandSpec, app!: Bool = false
     }
     false
 }
+
+/** Returns targets only when help occupies the app's command slot. */
+func groupHelpTarget(argv: Array<String>, spec: JianCommandSpec): ?Array<String> {
+    let args = JianArgCursor(argv, shortsTakingValue: valueShorts(spec))
+    let positionals = spec.inputs.filter({ input => input.kind == JianInputKind.Positional })
+    var position = 0
+    while (let Some(arg) <- args.next()) {
+        match (arg) {
+            case JianArg.Operand(value) =>
+                if (position >= positionals.size) {
+                    return if (value == "help") { Some(args.remaining()) } else { None }
+                }
+                if (!positionals[position].repeatable) { position++ }
+            case JianArg.Long(name) =>
+                let inputs = spec.inputs.filter({ input => input.kind != JianInputKind.Positional && input.name == name })
+                if (inputs.isEmpty()) { return None }
+                if (inputs[0].kind == JianInputKind.ValueOption) { args.nextValue("--${name}") }
+            case JianArg.Long(name, _) =>
+                if (!spec.inputs.any({ input => input.kind != JianInputKind.Positional && input.name == name })) { return None }
+            case JianArg.Short(name) =>
+                if (!spec.inputs.any({ input => input.kind != JianInputKind.Positional && input.short == Some(name) })) { return None }
+            case JianArg.Short(name, _) =>
+                if (!spec.inputs.any({ input => input.kind != JianInputKind.Positional && input.short == Some(name) })) { return None }
+        }
+    }
+    None
+}

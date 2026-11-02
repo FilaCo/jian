@@ -72,6 +72,45 @@ camelCase and snake_case CLI names become kebab-case. `JianApp` needs no context
 `JianContextApp<C>` receives typed dependencies. `app.run` takes arguments
 excluding the executable name, which is exactly what `main(args)` receives.
 
+## Command names, aliases and help
+
+Use `@JianCommand[name: "fmt", aliases: ["format"]]` on `formatPaths` to
+expose `demo fmt` and `demo format` through one typed adapter. Without `name`,
+the function name becomes kebab-case as before. An explicit name replaces that
+derived spelling; the source function and `FormatPathsCommand` keep their names.
+See the [runnable example](examples/command_names/src/main.cj).
+
+Aliases appear beside their canonical command in declaration order, without
+separate command entries. Usage and error messages retain the spelling used in
+the invocation. Hand-written adapters declare aliases in
+`JianCommandSpec(aliases: ["format"])`.
+
+Command names, aliases and sub-app mount names share one namespace per app.
+Names must be nonempty, contain no ASCII whitespace or control bytes, and must
+not start with `-`. They are case-sensitive and preserved verbatim, without
+normalization. `help` is reserved. Duplicate spellings, including a command's own
+name or aliases, throw `IllegalArgumentException` during registration, before the
+app changes. Invalid literal macro names and aliases fail compilation where
+possible. Sub-apps keep a single name supplied by their mount.
+
+`demo help` is equivalent to `demo --help`. Use `demo help COMMAND` or
+`demo help GROUP COMMAND` to show a target's help; command aliases work in these
+paths too. An app path such as `demo help GROUP` shows that app's help. Unknown
+targets and extra words or options after a command target return usage error 2.
+Help targets are validated before entering them, without callbacks or context
+projections; ancestors entered before a nested `GROUP help` may already have run.
+Valid help paths
+preserve the lifecycle of the equivalent `--help` invocation: ancestor callbacks
+run once and can stop dispatch with `Exit`, while the target command or app
+callback does not run. An ancestor's required arguments and options still apply. Help scope follows the
+equivalent invocation with a trailing `--help`: a callback positional can consume
+a target word, causing that app's help to appear. To supply callback arguments
+explicitly, place `help` at that app's command boundary, as in
+`demo GROUP CALLBACK_ARG help COMMAND`.
+The word `help` is special only at an app's command boundary; arguments and
+option values belonging to a callback or selected command keep their values.
+`--help` and `-h` remain available.
+
 ## Parameters become arguments and options
 
 Without a marker, positional function parameters become CLI arguments and

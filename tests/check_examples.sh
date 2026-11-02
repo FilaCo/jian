@@ -44,6 +44,12 @@ check callback_exit 0 'Fetching source files' '' fetch-src
 check callback_exit 0 'Running server over stdio' ''
 check callback_exit 2 '' $'Error: unknown command \'fetch-scr\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...' fetch-scr
 
+check command_names 0 'src: check=false' '' fmt src
+check command_names 0 'src: check=true' '' format src --check
+check command_names 0 'src: check=true' '' direct
+check command_names 0 'help: check=false' '' fmt -- help
+check command_names 2 '' $'Error: unknown command \'format-paths\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...' format-paths src
+
 for manifest in "$root"/examples/*/cjpm.toml; do
     example_dir=$(dirname "$manifest")
     "$example_dir/target/release/bin/main" --help > "$example_tmp/help"

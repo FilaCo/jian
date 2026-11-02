@@ -383,3 +383,47 @@ class AppTest {
     }
 
 }
+
+@Test
+class CommandAliasesTest {
+    @TestCase[name in ["", "two words", "two\twords", "-name", "help"]]
+    func malformedRuntimeCommandAndMountNamesAreRejected(name: String) {
+        // arrange
+        let app = JianApp()
+
+        // act / assert
+        @AssertThrows[IllegalArgumentException](app.add(TestCommand(name, { _ => 0 })))
+        @AssertThrows[IllegalArgumentException](app.add(JianApp(), name: name))
+        @AssertThrows[IllegalArgumentException](app.add(TestCommand("valid", { _ => 0 },
+            spec: JianCommandSpec(aliases: [name]))))
+    }
+
+    @TestCase
+    func collisionsAreRejectedBeforeRegistrationMutatesTheApp() {
+        // arrange
+        let app = JianApp().add(TestCommand("first", { _ => 1 }, spec: JianCommandSpec(aliases: ["f"])))
+
+        // act / assert
+        @AssertThrows[IllegalArgumentException](app.add(TestCommand("f", { _ => 0 })))
+        @AssertThrows[IllegalArgumentException](app.add(JianApp(), name: "f"))
+        @AssertThrows[IllegalArgumentException](app.add(TestCommand("second", { _ => 0 },
+            spec: JianCommandSpec(aliases: ["ok", "f"]))))
+        @AssertThrows[IllegalArgumentException](app.add(TestCommand("same", { _ => 0 },
+            spec: JianCommandSpec(aliases: ["same"]))))
+        @AssertThrows[IllegalArgumentException](app.add(TestCommand("third", { _ => 0 },
+            spec: JianCommandSpec(aliases: ["t", "t"]))))
+        app.add(TestCommand("ok", { _ => 2 }))
+        @Expect(app.run(["ok"]), 2)
+        @Expect(app.run(["f"]), 1)
+    }
+
+    @TestCase
+    func aliasesCannotCollideWithAnExistingMount() {
+        // arrange
+        let app = JianApp().add(JianApp(), name: "child")
+
+        // act / assert
+        @AssertThrows[IllegalArgumentException](app.add(TestCommand("run", { _ => 0 },
+            spec: JianCommandSpec(aliases: ["child"]))))
+    }
+}
