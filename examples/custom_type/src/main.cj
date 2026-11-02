@@ -2,21 +2,9 @@ package custom_type_example
 
 import jian.*
 
-enum Color <: JianArgValue<Color> {
+@JianEnumArgValue
+enum Color {
     | Red | Blue
-
-    public static func takesValue(): Bool { true }
-    public static func metavar(): String { "COLOR" }
-    public static func whenAbsent(): ?Color { None }
-
-    public static func accept(_: ?Color, raw: ?String): Color {
-        let text = raw ?? throw JianUsageException("missing color value")
-        match (text) {
-            case "red" => Red
-            case "blue" => Blue
-            case _ => throw JianInvalidValueException(text, "red or blue")
-        }
-    }
 }
 
 let app = JianApp(name: "demo")

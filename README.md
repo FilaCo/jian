@@ -230,10 +230,28 @@ Throw `JianInvalidValueException(raw, expected)` for invalid text. The generated
 parser adds the argument or option name to the error. Throw `JianUsageException`
 for other usage failures.
 
-The [custom type example](examples/custom_type/src/main.cj) implements this
-interface on a `Color` enum that accepts `red` or `blue`. The command receives a
-`Color` directly; the same implementation also supports `?Color` and
-`Array<Color>` through the library's generic extensions.
+For enums without associated values, derive the implementation with a single
+`import jian.*`:
+
+```cangjie
+@JianEnumArgValue
+enum Color { | Red | Blue }
+```
+
+`@JianEnumArgValue` accepts nongeneric, exhaustive enums. Variant names become
+case-sensitive kebab-case (`DeepBlue` → `deep-blue`, `RGBValue` → `rgb-value`);
+ambiguous spellings are compile errors. The metavar is the uppercase kebab-case
+enum name (`Color` → `COLOR`). Each occurrence consumes text and replaces the
+previous scalar value; omission remains required unless the parameter declares a
+default or uses `?Color`. `Array<Color>` accumulates occurrences through the
+library's generic extension. Invalid values list accepted spellings.
+
+The [custom type example](examples/custom_type/src/main.cj) uses this derive and
+receives a concrete `Color` in the command. Use a manual `JianArgValue` implementation
+for aliases, case-insensitive input, normalization, associated values or other
+custom behavior. Do not combine the derive with a manual implementation.
+`@Derive[JianArgValue]` is unavailable because the standard deriving registry is
+protected; this dedicated macro needs no additional imports.
 
 ```bash
 cd examples/custom_type
@@ -276,7 +294,7 @@ Run it from its directory with `cjpm run -- ...`.
 | [greet](examples/greet/src/main.cj) | Arguments, defaults, flags and short clusters | `greet Alice -lt2` |
 | [sync](examples/sync/src/main.cj) | Variadic paths, repeated options, optional values | `sync src docs -nj4 -x target --exclude=.git` |
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |
-| [custom_type](examples/custom_type/src/main.cj) | User-defined enum parsing | `paint --color blue` |
+| [custom_type](examples/custom_type/src/main.cj) | Derived enum parsing | `paint --color blue` |
 | [context](examples/context/src/main.cj) | Typed dependencies, callback configuration and nested app | `--verbose people greet Alice` |
 
 The sync and deploy examples only print plans; they do not modify files or deploy.
@@ -291,8 +309,7 @@ example. The repository's `pre-push` hook runs the same suite.
 
 ## Current limits
 
-- No environment-variable defaults or automatic enum parsers. Enums can implement
-  `JianArgValue<T>` explicitly.
+- No environment-variable defaults.
 - Help is explicit (`help:`); doc comments are not extracted.
 - Generic command and callback functions are rejected. Commands return `Unit` or
   `Int64`; callbacks return `JianCallbackResult`. Return types may be inferred.
