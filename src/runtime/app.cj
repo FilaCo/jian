@@ -73,9 +73,11 @@ public class JianApp {
      * Runs argv excluding the executable name. Help returns 0; usage errors return 2.
      * Callback Exit(code) returns immediately, including Exit(0); Continue dispatches.
      * Other exceptions propagate. Ancestor callbacks may run before nested help.
-     * Help and usage errors use the root streams, which remain open.
+     * Stream overrides apply to nested paths for this run only; all streams remain open.
      */
-    public func run(argv: Array<String>): Int64 { core.dispatch(argv, name, core.stdout, core.stderr, ()) }
+    public func run(argv: Array<String>, stdout!: ?OutputStream = None, stderr!: ?OutputStream = None): Int64 {
+        core.dispatch(argv, name, stdout ?? core.stdout, stderr ?? core.stderr, ())
+    }
 }
 
 /**
@@ -190,11 +192,13 @@ public class JianContextApp<C> {
      * Runs argv excluding the executable name with this invocation's context.
      * Callbacks run root to leaf; Exit(code) stops dispatch, including Exit(0). Mutations are not rolled back.
      * Help returns 0 and skips its target; ancestor callbacks may already have run.
-     * Usage errors return 2 on stderr; other exceptions propagate. Streams remain open.
+     * Usage errors return 2 on stderr; other exceptions propagate.
+     * Stream overrides apply to nested paths for this run only; all streams remain open.
      * The caller owns context resources and synchronization of shared mutable state.
      */
-    public func run(argv: Array<String>, context!: C): Int64 {
-        core.dispatch(argv, name, core.stdout, core.stderr, context)
+    public func run(argv: Array<String>, context!: C, stdout!: ?OutputStream = None,
+        stderr!: ?OutputStream = None): Int64 {
+        core.dispatch(argv, name, stdout ?? core.stdout, stderr ?? core.stderr, context)
     }
 }
 

@@ -5,6 +5,7 @@ import std.ast.*
 /**
  * Preserves the function and generates a typed CLI adapter and registration overload.
  * An optional app registers the command; direct calls retain parameter defaults.
+ * root: true registers the app's sole action; it requires an app and forbids name/aliases.
  * name overrides the derived CLI name; aliases dispatch to the same typed adapter.
  * JianFromContext<C>() parameters are injected by type and remain required in direct calls.
  */
@@ -88,6 +89,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     var aliases = quote([])
     var help = quote("")
     var app = Tokens()
+    var root = false
     var usedSettings: Array<String> = []
     if (attrs.size != 0) {
         let settings = CallExpr(quote(__jian_settings($(attrs))))
@@ -106,6 +108,13 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             match (key) {
                 case "help" => help = setting.expr.toTokens()
                 case "app" => app = setting.expr.toTokens()
+                case "root" =>
+                    if (callback) { throw ASTException("JianCallback does not support root") }
+                    let value = setting.expr.toTokens().toString().replace(" ", "")
+                    if (value != "true" && value != "false") {
+                        throw ASTException("JianCommand root must be a Bool literal")
+                    }
+                    root = value == "true"
                 case "name" =>
                     if (callback) { throw ASTException("JianCallback does not support command names") }
                     name = setting.expr.toTokens()
@@ -117,7 +126,13 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             }
         }
     }
-    if (!callback) { validateCommandLiteral(name) }
+    if (root) {
+        if (app.size == 0) { throw ASTException("JianCommand root: true requires a positional app") }
+        if (usedSettings.contains("name") || usedSettings.contains("aliases")) {
+            throw ASTException("JianCommand root: true does not support name or aliases")
+        }
+    }
+    if (!callback && !root) { validateCommandLiteral(name) }
     validateCommandAliases(aliases, name)
     var specs = Tokens()
     var storage = Tokens()
@@ -381,6 +396,8 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     declaration.modifiers.add(Modifier(Token(TokenKind.PRIVATE)))
     let registration = if (app.size == 0) { Tokens() } else if (callback) {
         quote(let _ = ($(app)).callback($(functionName));)
+    } else if (root) {
+        quote(let _ = ($(app)).command($(functionName));)
     } else {
         quote(let _ = ($(app)).add($(functionName));)
     }

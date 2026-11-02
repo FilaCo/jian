@@ -374,3 +374,21 @@ example. The repository's `pre-push` hook runs the same suite.
   adapter names come from the function name.
 - Optional type aliases keep their CLI behavior, but need an explicit `None`
   default to make named parameters omissible in direct function calls.
+
+A single-action executable can register its root action declaratively:
+
+```cangjie
+let APP = JianApp(name: "format")
+
+@JianCommand[APP, root: true, help: "Format the selected file."]
+func formatFile(path: String): Int64 {
+    0
+}
+```
+
+`APP.run(["input.cj"])` runs that action directly. `root: true` requires an app
+and cannot be combined with command names, aliases, callbacks or child commands.
+
+`run(..., stdout: out, stderr: err)` overrides output streams for one invocation,
+including nested commands and usage errors. The app keeps its configured default
+streams for later runs, and leaves all streams open.
