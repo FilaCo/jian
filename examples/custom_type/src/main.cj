@@ -2,7 +2,7 @@ package custom_type_example
 
 import jian.*
 
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum Color {
     | Red | Blue
 }

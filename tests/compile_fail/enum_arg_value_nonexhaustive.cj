@@ -1,5 +1,5 @@
-// expect-error: @JianEnumArgValue does not support non-exhaustive enums
+// expect-error: @JianDerive[JianArgValue] does not support non-exhaustive enums
 package fixture
 import jian.*
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum Value { | Empty | ... }

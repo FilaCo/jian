@@ -1,7 +1,7 @@
-// expect-error: @JianEnumArgValue conflicts with an explicit JianArgValue implementation
+// expect-error: @JianDerive[JianArgValue] conflicts with an explicit JianArgValue implementation
 package fixture
 
 import jian.*
 
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum Value <: JianArgValue<Value> { | Empty }

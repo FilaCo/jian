@@ -3,5 +3,5 @@ package fixture
 
 import jian.*
 
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum Value { | DeepBlue | Deep_Blue }

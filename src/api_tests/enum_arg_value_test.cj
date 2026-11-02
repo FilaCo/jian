@@ -6,7 +6,7 @@ import std.io.ByteBuffer
 import std.unittest.*
 import std.unittest.testmacro.*
 
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum PaintColor { | Red | DeepBlue | RGBValue | snake_case }
 
 private func paintCode(color: PaintColor): Int64 {

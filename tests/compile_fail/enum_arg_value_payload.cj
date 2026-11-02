@@ -1,7 +1,7 @@
-// expect-error: @JianEnumArgValue requires variants without associated values
+// expect-error: @JianDerive[JianArgValue] requires variants without associated values
 package fixture
 
 import jian.*
 
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum Value { | Empty | Data(Int64) }

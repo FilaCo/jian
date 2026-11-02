@@ -234,11 +234,12 @@ For enums without associated values, derive the implementation with a single
 `import jian.*`:
 
 ```cangjie
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum Color { | Red | Blue }
 ```
 
-`@JianEnumArgValue` accepts nongeneric, exhaustive enums. Variant names become
+`@JianDerive` currently supports only `JianArgValue`, for nongeneric, exhaustive
+enums. Variant names become
 case-sensitive kebab-case (`DeepBlue` → `deep-blue`, `RGBValue` → `rgb-value`);
 ambiguous spellings are compile errors. The metavar is the uppercase kebab-case
 enum name (`Color` → `COLOR`). Each occurrence consumes text and replaces the
@@ -251,7 +252,7 @@ receives a concrete `Color` in the command. Use a manual `JianArgValue` implemen
 for aliases, case-insensitive input, normalization, associated values or other
 custom behavior. Do not combine the derive with a manual implementation.
 `@Derive[JianArgValue]` is unavailable because the standard deriving registry is
-protected; this dedicated macro needs no additional imports.
+protected; `@JianDerive[JianArgValue]` needs no additional imports.
 
 ```bash
 cd examples/custom_type

@@ -1,7 +1,7 @@
-// expect-error: @JianEnumArgValue requires an enum
+// expect-error: @JianDerive[JianArgValue] requires an enum
 package fixture
 
 import jian.*
 
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 struct Value {}

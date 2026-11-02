@@ -1,7 +1,7 @@
-// expect-error: @JianEnumArgValue requires a nongeneric enum
+// expect-error: @JianDerive[JianArgValue] requires a nongeneric enum
 package fixture
 
 import jian.*
 
-@JianEnumArgValue
+@JianDerive[JianArgValue]
 enum Value<T> { | Empty }
