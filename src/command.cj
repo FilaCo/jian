@@ -228,8 +228,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let repeatable = if (repeated) { quote(true) } else { quote(false) }
         var short = quote(None)
         if (let Some(shortName) <- settings.short) {
-            // LSPMacroServer preserves the string value but loses its original quote style.
-            // Read literal tokens rather than requiring a particular printed spelling.
+            // Literal values identify short names independently of their printed quote style.
             if (shortName.size != 1) {
                 throw ASTException("short name must be a single ASCII character literal")
             }
