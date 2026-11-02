@@ -146,5 +146,7 @@ any parent callbacks in the ordinary dispatch lifecycle.
 
 These hooks apply only to generated CLI adapters for `@JianCommand` and
 `@JianCallback`. Ordinary direct calls retain regular defaults and skip all hooks.
-Help and metadata inspection execute neither hooks nor defaults. See the runnable
+Help for an adapter and metadata inspection execute neither its hooks nor defaults.
+Ancestor callbacks may already have run before nested help, following the normal
+dispatch lifecycle. See the runnable
 [`input_hooks` example](../examples/input_hooks/src/main.cj).
