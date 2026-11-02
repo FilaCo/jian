@@ -3,7 +3,46 @@
 `JianApp` is an application without injected dependencies. `JianContextApp<C>`
 requires a context on each run. Both support command registration, one callback,
 help and nested groups. An app without an explicit `name` uses `app` in standalone
-help and usage. A command keeps its name even if it is the app's only command.
+help and usage. A command registered with `.add(...)` keeps its name even if it
+is the app's only command.
+
+## Single-command applications
+
+Select one ordinary annotated command explicitly:
+
+```cangjie
+@JianCommand[help: "Greet someone."]
+func greet(name: String, times!: Int64 = 1): Unit {
+    for (_ in 0..times) { println("Hello, ${name}!") }
+}
+
+let app = JianApp(name: "demo", help: "A greeting tool.").command(greet)
+main(args: Array<String>): Int64 { app.run(args) }
+```
+
+`demo Alice --times 2` invokes the action directly. `.command(GreetCommand())`
+also accepts an adapter. Direct calls to `greet("Alice")` retain their types and
+defaults. `JianContextApp<C>.command(...)` accepts both commands requiring `C`
+and context-free commands; pass `context:` to each `run` as usual.
+
+`--help` and `-h` print the action's metadata at the executable path without
+running it. The app description precedes the command description. Usage contains
+no `COMMAND` placeholder or command list. With no input, an action runs if its
+inputs allow absence; otherwise it reports the missing argument or option. An
+operand spelled `help` is an ordinary value; use `--help` to request help.
+Command names and aliases do not select actions in this mode.
+
+A sole root action cannot coexist with callbacks, named commands, or child apps.
+Both registration orders, and a second `.command(...)`, throw
+`IllegalArgumentException` before changing the app. Configure initialization in
+the action or provide typed context. Existing `.add(...)` groups always retain
+command selection, even with one command; this mode does not introduce a default
+action alongside named subcommands.
+
+A single-command app may itself be mounted in a group. Its inputs then follow
+the mount name directly, and help and usage use that full path and the mount's
+description. A parent group's `help MOUNT` also prints the action's help without
+running it. Root streams and normal ancestor callback behavior still apply.
 
 ## Registration
 

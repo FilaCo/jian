@@ -7,7 +7,7 @@ import std.sort.sort
 
 /**
  * An application without injected context. Defaults to "app" in standalone usage.
- * Commands retain their names even when the application has only one command.
+ * Commands registered with add retain their names; command selects a sole root action.
  */
 public class JianApp {
     let core: AppCore<Unit>
@@ -19,6 +19,17 @@ public class JianApp {
         this.name = name
         this.help = help
         core = AppCore<Unit>(help, stderr, stdout)
+    }
+
+    /** Selects the sole root action; incompatible with callbacks, commands and groups. */
+    public func command(factory: (JianCommandTag) -> JianCommand): JianApp {
+        command(factory(JianCommandTag()))
+    }
+
+    /** Runs this adapter directly after the executable name, without command selection. */
+    public func command(value: JianCommand): JianApp {
+        core.command(PlainCommand<Unit>(value))
+        this
     }
 
     /** Registers a function annotated with @JianCommand. */
@@ -82,6 +93,25 @@ public class JianContextApp<C> {
         this.help = help
         core = AppCore<C>(help, stderr, stdout)
     }
+
+    /** Selects the sole root action requiring this run's context. */
+    public func command(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
+        command(factory(JianContextCommandTag<C>()))
+    }
+
+    /** Selects a root action that ignores the context. */
+    public func command(factory: (JianCommandTag) -> JianCommand): JianContextApp<C> {
+        command(factory(JianCommandTag()))
+    }
+
+    /** Incompatible with callbacks, named commands and groups, in either registration order. */
+    public func command(value: JianContextCommand<C>): JianContextApp<C> {
+        core.command(value)
+        this
+    }
+
+    /** Selects a context-free adapter as the sole root action. */
+    public func command(value: JianCommand): JianContextApp<C> { command(PlainCommand<C>(value)) }
 
     /** Registers a function requiring this context, annotated with @JianCommand. */
     public func add(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
@@ -200,12 +230,28 @@ class ContextMount<P, C> <: AppMount<P> {
 class AppCore<C> {
     private let commands = ArrayList<JianContextCommand<C>>()
     private let apps = ArrayList<AppMount<C>>()
+    private var rootCommand: ?JianContextCommand<C> = None
     private var appCallback: ?JianContextCallback<C> = None
     let node = AppNode()
 
     AppCore(let help: String, let stderr: OutputStream, let stdout: OutputStream) {}
 
+    func command(value: JianContextCommand<C>): Unit {
+        requireGroup()
+        if (!commands.isEmpty() || !apps.isEmpty() || appCallback.isSome()) {
+            throw IllegalArgumentException("root command cannot be combined with commands, groups or callbacks")
+        }
+        rootCommand = Some(value)
+    }
+
+    private func requireGroup(): Unit {
+        if (rootCommand.isSome()) {
+            throw IllegalArgumentException("root command cannot be combined with commands, groups or callbacks")
+        }
+    }
+
     func add(command: JianContextCommand<C>): Unit {
+        requireGroup()
         let names = [command.name].concat(command.spec.aliases)
         var seen: Array<String> = []
         for (name in names) {
@@ -217,11 +263,13 @@ class AppCore<C> {
     }
 
     func callback(value: JianContextCallback<C>): Unit {
+        requireGroup()
         if (appCallback.isSome()) { throw IllegalArgumentException("duplicate callback") }
         appCallback = Some(value)
     }
 
     func mount<D>(child: AppCore<D>, name: String, help: String, convert: (C) -> D): Unit {
+        requireGroup()
         requireAvailable(name)
         if (child.node.reaches(node)) { throw IllegalArgumentException("cyclic app mount '${name}'") }
         apps.add(ContextMount<C, D>(child, name, help, convert))
@@ -229,6 +277,9 @@ class AppCore<C> {
     }
 
     public func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream, context: C, help!: String = this.help): Int64 {
+        if (let Some(command) <- rootCommand) {
+            return dispatchRoot(command, argv, path, output, errors, context, help)
+        }
         let spec = match (appCallback) {
             case Some(value) => value.spec
             case None => JianCommandSpec()
@@ -299,6 +350,27 @@ class AppCore<C> {
             throw JianUsageException("unknown command '${commandName}'")
         } catch (error: JianUsageException) {
             errors.write("Error: ${error.message}\n${usage}".toArray())
+            errors.flush()
+            2
+        }
+    }
+
+    private func dispatchRoot(command: JianContextCommand<C>, argv: Array<String>, path: String,
+        output: OutputStream, errors: OutputStream, context: C, help: String): Int64 {
+        let spec = command.spec
+        try {
+            if (requestsHelp(argv, spec)) {
+                var text = usageLine(path, spec)
+                if (!help.isEmpty()) { text += "\n${help}\n" }
+                if (!spec.help.isEmpty()) { text += "\n${spec.help}\n" }
+                text += parameterHelp(spec)
+                output.write(text.toArray())
+                output.flush()
+                return 0
+            }
+            command.run(JianArgCursor(argv, shortsTakingValue: valueShorts(spec)), context)
+        } catch (error: JianUsageException) {
+            errors.write("Error: ${error.message}\n${usageLine(path, spec)}".toArray())
             errors.flush()
             2
         }
