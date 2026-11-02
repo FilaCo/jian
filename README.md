@@ -72,6 +72,45 @@ camelCase and snake_case CLI names become kebab-case. `JianApp` needs no context
 `JianContextApp<C>` receives typed dependencies. `app.run` takes arguments
 excluding the executable name, which is exactly what `main(args)` receives.
 
+## Command names, aliases and help
+
+Use `@JianCommand[name: "fmt", aliases: ["format"]]` on `formatPaths` to
+expose `demo fmt` and `demo format` through one typed adapter. Without `name`,
+the function name becomes kebab-case as before. An explicit name replaces that
+derived spelling; the source function and `FormatPathsCommand` keep their names.
+See the [runnable example](examples/command_names/src/main.cj).
+
+Aliases appear beside their canonical command in declaration order, without
+separate command entries. Usage and error messages retain the spelling used in
+the invocation. Hand-written adapters declare aliases in
+`JianCommandSpec(aliases: ["format"])`.
+
+Command names, aliases and sub-app mount names share one namespace per app.
+Names must be nonempty, contain no ASCII whitespace or control bytes, and must
+not start with `-`. They are case-sensitive and preserved verbatim, without
+normalization. `help` is reserved. Duplicate spellings, including a command's own
+name or aliases, throw `IllegalArgumentException` during registration, before the
+app changes. Invalid literal macro names and aliases fail compilation where
+possible. Sub-apps keep a single name supplied by their mount.
+
+`demo help` is equivalent to `demo --help`. Use `demo help COMMAND` or
+`demo help GROUP COMMAND` to show a target's help; command aliases work in these
+paths too. An app path such as `demo help GROUP` shows that app's help. Unknown
+targets and extra words or options after a command target return usage error 2.
+Help targets are validated before entering them, without callbacks or context
+projections; ancestors entered before a nested `GROUP help` may already have run.
+Valid help paths
+preserve the lifecycle of the equivalent `--help` invocation: ancestor callbacks
+run once and can stop dispatch with `Exit`, while the target command or app
+callback does not run. An ancestor's required arguments and options still apply. Help scope follows the
+equivalent invocation with a trailing `--help`: a callback positional can consume
+a target word, causing that app's help to appear. To supply callback arguments
+explicitly, place `help` at that app's command boundary, as in
+`demo GROUP CALLBACK_ARG help COMMAND`.
+The word `help` is special only at an app's command boundary; arguments and
+option values belonging to a callback or selected command keep their values.
+`--help` and `-h` remain available.
+
 ## Parameters become arguments and options
 
 Without a marker, positional function parameters become CLI arguments and
@@ -110,6 +149,13 @@ accepted but are omitted from help. Cangjie requires `!` on parameters with
 defaults, including `JianArgument(...)`; their CLI kind is independent of direct
 function-call naming. See [Arguments and options](docs/arguments-and-options.md)
 for optional aliases, direct calls and marker constraints.
+
+Attach `preprocess: (String) -> String` to clean raw CLI text before conversion,
+`normalize: (T) -> T` to transform the final typed value, and
+`validate: (T) -> Unit` to check it. Throw `JianInputException("explanation")`
+for an input-labelled usage error (exit 2). Final hooks include defaults, optional
+`None` and accumulated arrays; direct function calls skip hooks. See
+[Input hooks](docs/arguments-and-options.md#input-hooks) for ordering and examples.
 
 ## Apps, sub-apps and callbacks
 
@@ -296,6 +342,7 @@ Run it from its directory with `cjpm run -- ...`.
 | [sync](examples/sync/src/main.cj) | Variadic paths, repeated options, optional values | `sync src docs -nj4 -x target --exclude=.git` |
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |
 | [custom_type](examples/custom_type/src/main.cj) | Derived enum parsing | `paint --color blue` |
+| [input_hooks](examples/input_hooks/src/main.cj) | Raw Path normalization and typed validation | `generate " model.json " --port 9000` |
 | [context](examples/context/src/main.cj) | Typed dependencies, callback configuration and nested app | `--verbose people greet Alice` |
 
 The sync and deploy examples only print plans; they do not modify files or deploy.

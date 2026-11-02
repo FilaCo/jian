@@ -34,7 +34,7 @@ private func greetingSpec(): JianCommandSpec {
 
 @Test
 class HelpTest {
-    @TestCase[input in [["--help"], ["-h"]]]
+    @TestCase[input in [["--help"], ["-h"], ["help"], ["--help", "help", "unknown"]]]
     func appHelpListsCommandsAndSubAppsTogetherInNameOrder(input: Array<String>) {
         // arrange
         let output = ByteBuffer()
@@ -213,4 +213,160 @@ class HelpTest {
         @Expect(output.bytes().isEmpty(), true)
         @Expect(String.fromUtf8(errors.bytes()), "Error: ${expected[index]}\nUsage: demo greet [OPTIONS] NAME [FILES...]\n")
     }
+}
+
+@Test
+class HelpAliasTest {
+    @TestCase[input in [["help", "admin", "s"], ["admin", "help", "s"], ["admin", "s", "--help"]]]
+    func nestedHelpRunsAncestorCallbacksOnceWithoutExecutingTheCommand(input: Array<String>) {
+        // arrange
+        let output = ByteBuffer()
+        let events = ArrayList<String>()
+        let child = JianApp().callback(HelpCallback(JianCommandSpec(), action: { args =>
+            @Expect(args.peek(), Some(JianArg.Operand("s")))
+            events.add("child"); JianCallbackResult.Continue
+        })).add(HelpCommand("sync", JianCommandSpec(aliases: ["s"])))
+        let app = JianApp(name: "demo", stdout: output)
+            .callback(HelpCallback(JianCommandSpec(), action: { args =>
+                @Expect(args.peek(), Some(JianArg.Operand("admin")))
+                events.add("root"); JianCallbackResult.Continue
+            })).add(child, name: "admin")
+
+        // act
+        let code = app.run(input)
+
+        // assert
+        @Expect(code, 0)
+        @Expect(events.toArray(), ["root", "child"])
+        @Expect(String.fromUtf8(output.bytes()).startsWith("Usage: demo admin s [OPTIONS]"), true)
+    }
+
+    @TestCase
+    func helpForAnAppSkipsItsCallbackAndRootHelpSkipsAllCallbacks() {
+        // arrange
+        let output = ByteBuffer()
+        let events = ArrayList<String>()
+        let child = JianApp().callback(HelpCallback(JianCommandSpec()))
+        let app = JianApp(name: "demo", stdout: output)
+            .callback(HelpCallback(JianCommandSpec(), action: { _ =>
+                events.add("root"); JianCallbackResult.Continue
+            })).add(child, name: "admin")
+
+        // act
+        @Expect(app.run(["help"]), 0)
+        @Expect(app.run(["help", "admin"]), 0)
+
+        // assert
+        @Expect(events.toArray(), ["root"])
+        @Expect(String.fromUtf8(output.bytes()).contains("Usage: demo admin [OPTIONS]"), true)
+    }
+
+    @TestCase[input in [["help", "absent"], ["help", "admin", "absent"], ["help", "admin", "sync", "extra"]]]
+    func invalidHelpPathsHaveNoCallbackOrCommandEffects(input: Array<String>) {
+        // arrange
+        let output = ByteBuffer()
+        let errors = ByteBuffer()
+        let child = JianApp().callback(HelpCallback(JianCommandSpec()))
+            .add(HelpCommand("sync", JianCommandSpec()))
+        let app = JianApp(name: "demo", stdout: output, stderr: errors)
+            .callback(HelpCallback(JianCommandSpec())).add(child, name: "admin")
+
+        // act
+        let code = app.run(input)
+
+        // assert
+        @Expect(code, 2)
+        @Expect(output.bytes().isEmpty(), true)
+        @Expect(String.fromUtf8(errors.bytes()).startsWith("Error: "), true)
+    }
+
+    @TestCase
+    func helpValuesRemainAvailableAfterCommandSelectionAndInCallbacks() {
+        // arrange
+        let seen = ArrayList<String>()
+        let spec = JianCommandSpec(inputs: [JianInputSpec("config", kind: JianInputKind.ValueOption)])
+        let app = JianApp().callback(HelpCallback(spec, action: { args =>
+            @Expect(args.next(), Some(JianArg.Long("config")))
+            seen.add(args.nextValue("--config"))
+            JianCallbackResult.Continue
+        })).add(HelpCommand("echo", JianCommandSpec(), action: { args =>
+            seen.add(all: args.remaining()); 7
+        }))
+
+        // act
+        let code = app.run(["--config", "help", "echo", "--", "help"])
+
+        // assert
+        @Expect(code, 7)
+        @Expect(seen.toArray(), ["help", "--", "help"])
+    }
+
+    @TestCase
+    func callbackOnlyPositionalsNamedHelpAreOrdinaryValues() {
+        // arrange
+        let spec = JianCommandSpec(inputs: [JianInputSpec("file", kind: JianInputKind.Positional)])
+        let app = JianApp().callback(HelpCallback(spec, action: { args =>
+            @Expect(args.next(), Some(JianArg.Operand("help")))
+            JianCallbackResult.Exit(5)
+        }))
+
+        // act
+        let code = app.run(["help"])
+
+        // assert
+        @Expect(code, 5)
+    }
+    @TestCase
+    func ancestorCallbackExitStillStopsTargetHelp() {
+        // arrange
+        let output = ByteBuffer()
+        let app = JianApp(stdout: output)
+            .callback(HelpCallback(JianCommandSpec(), action: { _ => JianCallbackResult.Exit(7) }))
+            .add(HelpCommand("run", JianCommandSpec()))
+
+        // act
+        let code = app.run(["help", "run"])
+
+        // assert
+        @Expect(code, 7)
+        @Expect(output.bytes().isEmpty(), true)
+    }
+
+    @TestCase
+    func helpForAMountedAppBypassesItsRequiredCallbackArguments() {
+        // arrange
+        let output = ByteBuffer()
+        let spec = JianCommandSpec(inputs: [
+            JianInputSpec("file", kind: JianInputKind.Positional, required: true)
+        ])
+        let child = JianApp().callback(HelpCallback(spec))
+        let app = JianApp(name: "demo", stdout: output).add(child, name: "child")
+
+        // act
+        let code = app.run(["help", "child"])
+
+        // assert
+        @Expect(code, 0)
+        @Expect(String.fromUtf8(output.bytes()).startsWith("Usage: demo child [OPTIONS] FILE"), true)
+    }
+
+    @TestCase
+    func deeperHelpTargetsCannotBecomeCommandsAfterCallbackPositionalParsing() {
+        // arrange
+        let output = ByteBuffer()
+        let spec = JianCommandSpec(inputs: [
+            JianInputSpec("file", kind: JianInputKind.Positional, required: true)
+        ])
+        let child = JianApp().callback(HelpCallback(spec))
+            .add(HelpCommand("run", JianCommandSpec()))
+        let app = JianApp(name: "demo", stdout: output).add(child, name: "child")
+
+        // act
+        let code = app.run(["help", "child", "run"])
+
+        // assert
+        @Expect(code, 0)
+        @Expect(String.fromUtf8(output.bytes()).startsWith("Usage: demo child [OPTIONS] FILE"), true)
+    }
+
 }

@@ -9,6 +9,9 @@ class ParameterSettings {
     var short: ?Tokens = None
     var help = quote("")
     var hidden = quote(false)
+    var preprocess: ?Tokens = None
+    var normalize: ?Tokens = None
+    var validate: ?Tokens = None
 }
 
 func parameterSettings(parameter: FuncParam): ParameterSettings {
@@ -56,7 +59,7 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
             throw ASTException("${marker} settings must be named")
         }
         let key = argument.identifier.value
-        if (!["default", "help", "hidden"].contains(key) && !(marker == "JianOption" && key == "short")) {
+        if (!["default", "help", "hidden", "preprocess", "normalize", "validate"].contains(key) && !(marker == "JianOption" && key == "short")) {
             throw ASTException("unknown ${marker} setting '${key}'")
         }
         if (seen.contains("," + key + ",")) {
@@ -69,6 +72,9 @@ func parameterSettings(parameter: FuncParam): ParameterSettings {
             case "short" => settings.short = Some(value)
             case "help" => settings.help = value
             case "hidden" => settings.hidden = value
+            case "preprocess" => settings.preprocess = Some(value)
+            case "normalize" => settings.normalize = Some(value)
+            case "validate" => settings.validate = Some(value)
             case _ => ()
         }
     }

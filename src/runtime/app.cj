@@ -27,7 +27,7 @@ public class JianApp {
     }
 
     /**
-     * Registers a command adapter; duplicate names throw IllegalArgumentException.
+     * Registers a command adapter; invalid or conflicting names/aliases throw IllegalArgumentException.
      * @JianCommand[app] generates this registration automatically.
      */
     public func add(command: JianCommand): JianApp {
@@ -181,6 +181,7 @@ interface AppMount<C> {
     prop name: String
     prop help: String
     func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream, context: C): Int64
+    func validateHelpTarget(target: Array<String>): Unit
 }
 
 class ContextMount<P, C> <: AppMount<P> {
@@ -188,6 +189,8 @@ class ContextMount<P, C> <: AppMount<P> {
         private let mountHelp: String, private let convert: (P) -> C) {}
     public prop name: String { get() { mountName } }
     public prop help: String { get() { mountHelp } }
+
+    public func validateHelpTarget(target: Array<String>): Unit { child.validateHelpTarget(target) }
 
     public func dispatch(argv: Array<String>, path: String, output: OutputStream, errors: OutputStream, context: P): Int64 {
         child.dispatch(argv, path, output, errors, convert(context), help: help)
@@ -203,7 +206,13 @@ class AppCore<C> {
     AppCore(let help: String, let stderr: OutputStream, let stdout: OutputStream) {}
 
     func add(command: JianContextCommand<C>): Unit {
-        requireAvailable(command.name)
+        let names = [command.name].concat(command.spec.aliases)
+        var seen: Array<String> = []
+        for (name in names) {
+            requireAvailable(name)
+            if (seen.contains(name)) { throw IllegalArgumentException("duplicate command '${name}'") }
+            seen = seen.concat([name])
+        }
         commands.add(command)
     }
 
@@ -227,17 +236,29 @@ class AppCore<C> {
         let hasCommands = !commands.isEmpty() || !apps.isEmpty() || appCallback.isNone()
         var usage = usageLine(path, spec, commands: hasCommands)
         try {
-            if (requestsHelp(argv, spec, app: true)) {
+            let helpTarget: ?Array<String> = if (requestsHelp(argv, spec, app: true)) {
+                Some([])
+            } else { groupHelpTarget(argv, spec) }
+            if (let Some(target) <- helpTarget) { validateHelpTarget(target) }
+            if (helpTarget == Some([])) {
                 output.write(appHelp(path, spec, hasCommands, help).toArray())
                 output.flush()
                 return 0
             }
-            let args = JianArgCursor(argv, shortsTakingValue: valueShorts(spec))
+            // Callbacks see the real selected child, just as they do for child --help.
+            let callbackArgv = match (helpTarget) {
+                case Some(target) => argv[..argv.size - target.size - 1].concat(target)
+                case None => argv
+            }
+            let args = JianArgCursor(callbackArgv, shortsTakingValue: valueShorts(spec))
             if (let Some(value) <- appCallback) {
                 match (value.run(args, context)) {
                     case JianCallbackResult.Continue => ()
                     case JianCallbackResult.Exit(code) => return code
                 }
+            }
+            if (let Some(target) <- helpTarget) {
+                return showHelpTarget(target, path, output, errors, context)
             }
             let commandName = match (args.next()) {
                 case Some(JianArg.Operand(value)) => value
@@ -256,7 +277,7 @@ class AppCore<C> {
                     throw JianUsageException.missingArgument("COMMAND")
             }
             for (command in commands) {
-                if (command.name == commandName) {
+                if (command.name == commandName || command.spec.aliases.contains(commandName)) {
                     let commandSpec = command.spec
                     let commandPath = "${path} ${commandName}"
                     usage = usageLine(commandPath, commandSpec)
@@ -293,7 +314,12 @@ class AppCore<C> {
         if (!names.isEmpty()) { text += "\nCommands:\n" }
         for (entry in names) {
             for (command in commands) {
-                if (command.name == entry) { text += helpRow(entry, command.spec.help) }
+                if (command.name == entry) {
+                    let aliases = command.spec.aliases
+                    let label = if (aliases.isEmpty()) { entry }
+                        else { entry + " (aliases: " + String.join(aliases, delimiter: ", ") + ")" }
+                    text += helpRow(label, command.spec.help)
+                }
             }
             for (app in apps) {
                 if (app.name == entry) { text += helpRow(entry, app.help) }
@@ -302,9 +328,48 @@ class AppCore<C> {
         text
     }
 
-    private func requireAvailable(value: String): Unit {
+    // Help lookup is pure: invalid paths cannot run callbacks or project context.
+    func validateHelpTarget(target: Array<String>): Unit {
+        if (target.isEmpty()) { return }
+        let name = target[0]
         for (command in commands) {
-            if (command.name == value) {
+            if (command.name == name || command.spec.aliases.contains(name)) {
+                if (target.size != 1) { throw JianUsageException("unexpected help target '${target[1]}'") }
+                return
+            }
+        }
+        for (app in apps) {
+            if (app.name == name) { app.validateHelpTarget(target[1..]); return }
+        }
+        throw JianUsageException("unknown command '${name}'")
+    }
+
+    private func showHelpTarget(target: Array<String>, path: String, output: OutputStream,
+        errors: OutputStream, context: C): Int64 {
+        let name = target[0]
+        for (command in commands) {
+            if (command.name == name || command.spec.aliases.contains(name)) {
+                output.write(commandHelp("${path} ${name}", command.spec).toArray())
+                output.flush()
+                return 0
+            }
+        }
+        for (app in apps) {
+            if (app.name == name) {
+                let remaining = target[1..].concat(["--help"])
+                return app.dispatch(remaining, "${path} ${name}", output, errors, context)
+            }
+        }
+        throw JianUsageException("unknown command '${name}'")
+    }
+
+    private func requireAvailable(value: String): Unit {
+        if (value.isEmpty() || value.startsWith("-") || value.toArray().any({ byte => byte <= 32 || byte == 127 })) {
+            throw IllegalArgumentException("invalid CLI command name '${value}'")
+        }
+        if (value == "help") { throw IllegalArgumentException("CLI command name 'help' is reserved") }
+        for (command in commands) {
+            if (command.name == value || command.spec.aliases.contains(value)) {
                 throw IllegalArgumentException("duplicate command '${value}'")
             }
         }

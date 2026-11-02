@@ -44,8 +44,19 @@ check callback_exit 0 'Fetching source files' '' fetch-src
 check callback_exit 0 'Running server over stdio' ''
 check callback_exit 2 '' $'Error: unknown command \'fetch-scr\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...' fetch-scr
 
+check command_names 0 'src: check=false' '' fmt src
+check command_names 0 'src: check=true' '' format src --check
+check command_names 0 'src: check=true' '' direct
+check command_names 0 'help: check=false' '' fmt -- help
+check command_names 2 '' $'Error: unknown command \'format-paths\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...' format-paths src
+
 for manifest in "$root"/examples/*/cjpm.toml; do
     example_dir=$(dirname "$manifest")
     "$example_dir/target/release/bin/main" --help > "$example_tmp/help"
     grep -F 'Usage: demo' "$example_tmp/help" > /dev/null
 done
+
+check input_hooks 0 'model.json:8080:model' '' generate ' model.json '
+check input_hooks 0 'model.json:9000:custom' '' generate model.json --port 9000 --name CUSTOM
+check input_hooks 2 '' $'Error: invalid value for \'MODEL\': path must not be blank\nUsage: demo generate [OPTIONS] MODEL' generate '  '
+check input_hooks 2 '' $'Error: invalid value for \'--port\': port must be between 1 and 65535\nUsage: demo generate [OPTIONS] MODEL' generate model.json --port 0
