@@ -59,6 +59,11 @@ mount overload across packages; import the context package with `*` for automati
 composition. The defaulted generated parent tag distinguishes overloads on
 specializations of `JianContextApp` and is an implementation detail.
 
+`JianCurrentOutput()` injects a named `JianOutput` parameter in commands and callbacks.
+It carries the effective root dispatch stdout/stderr, including per-run overrides,
+without creating CLI inputs or requiring context. Direct calls supply output explicitly.
+Streams remain caller-owned; overrides are not retained.
+
 `JianCurrentInvocation()` injects a named `JianInvocation` parameter in callbacks only;
 its marker default is removed for direct calls. It reads the next operand after
 callback parsing, without consuming it. `requestedSubcommand` is unvalidated

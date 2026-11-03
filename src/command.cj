@@ -8,6 +8,7 @@ import std.ast.*
  * root: true registers the app's sole action; it requires an app and forbids name/aliases.
  * name overrides the derived CLI name; aliases dispatch to the same typed adapter.
  * JianFromContext<C>() parameters are injected by type and remain required in direct calls.
+ * JianCurrentOutput() injects JianOutput with this run's streams; direct callers supply it explicitly.
  */
 public macro JianCommand(attrs: Tokens, input: Tokens): Tokens {
     commandAdapter(attrs, input)
@@ -151,6 +152,16 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let typeName = parameter.paramType.toTokens()
         let slot = Token(TokenKind.IDENTIFIER, "__jian_value_${index}")
         let settings = parameterSettings(parameter)
+        if (settings.marker == "JianCurrentOutput") {
+            if (typeName.toString().replace(" ", "") != "JianOutput") {
+                throw ASTException("JianCurrentOutput requires parameter type JianOutput")
+            }
+            declaration.funcParams[index] = withoutDefault(parameter)
+            bindings += quote(let $(identifier): JianOutput = __jian_output;)
+            if (index > 0) { arguments += quote(,) }
+            arguments += quote($(identifier): $(identifier))
+            continue
+        }
         if (settings.marker == "JianCurrentInvocation") {
             if (!callback) { throw ASTException("JianCurrentInvocation is only supported by @JianCallback") }
             if (typeName.toString().replace(" ", "") != "JianInvocation") {
@@ -389,6 +400,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
     let tagType = if (contextType.size == 0) { quote($(tagToken)) }
         else { quote($(tagToken)<$(contextType)>) }
     let returnType = if (callback) { quote(JianCallbackResult) } else { quote(Int64) }
+    let forwardedContext = if (contextType.size == 0) { Tokens() } else { quote(, __jian_context) }
     let invocation = quote($(implementation)($(arguments)))
     let result = if (callback) { invocation } else { quote(jianExitCode($(invocation))) }
     declaration.identifier = implementation
@@ -402,6 +414,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         quote(let _ = ($(app)).add($(functionName));)
     }
     // The required tag lets registration select an adapter without changing ordinary calls.
+    // A separate parser scope keeps user bindings such as output independent of the stream overload.
     directDeclaration.toTokens() + defaultHelpers + declaration.toTokens() + nameDeclaration + quote(
         private func $(specHelper)(): JianCommandSpec {
             JianCommandSpec(help: $(help), inputs: [$(specs)], aliases: $(aliases))
@@ -412,6 +425,13 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             $(commandName)
             public prop spec: JianCommandSpec { get() { $(specHelper)() } }
             public func run(__jian_args: JianArgCursor $(contextArgument)): $(returnType) {
+                run(__jian_args $(forwardedContext), output: JianOutput())
+            }
+            public func run(__jian_args: JianArgCursor $(contextArgument), output!: JianOutput): $(returnType) {
+                __jian_run(__jian_args $(forwardedContext), output)
+            }
+            private func __jian_run(__jian_args: JianArgCursor $(contextArgument), __jian_output: JianOutput): $(returnType) {
+                let _ = __jian_output;
                 $(storage)
                 var __jian_position = 0
                 while (let Some(__jian_arg) <- __jian_args.peek()) {

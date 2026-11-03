@@ -307,7 +307,7 @@ class AppCore<C> {
             }
             let args = JianArgCursor(callbackArgv, shortsTakingValue: valueShorts(spec))
             if (let Some(value) <- appCallback) {
-                match (value.run(args, context)) {
+                match (value.run(args, context, output: JianOutput(stdout: output, stderr: errors))) {
                     case JianCallbackResult.Continue => ()
                     case JianCallbackResult.Exit(code) => return code
                 }
@@ -342,7 +342,8 @@ class AppCore<C> {
                         output.flush()
                         return 0
                     }
-                    return command.run(JianArgCursor(remaining, shortsTakingValue: valueShorts(commandSpec)), context)
+                    return command.run(JianArgCursor(remaining, shortsTakingValue: valueShorts(commandSpec)), context,
+                        output: JianOutput(stdout: output, stderr: errors))
                 }
             }
             for (app in apps) {
@@ -372,7 +373,8 @@ class AppCore<C> {
                 output.flush()
                 return 0
             }
-            command.run(JianArgCursor(argv, shortsTakingValue: valueShorts(spec)), context)
+            command.run(JianArgCursor(argv, shortsTakingValue: valueShorts(spec)), context,
+                output: JianOutput(stdout: output, stderr: errors))
         } catch (error: JianUsageException) {
             errors.write("Error: ${error.message}\n${usageLine(path, spec)}".toArray())
             errors.flush()
@@ -462,12 +464,18 @@ class PlainCommand<C> <: JianContextCommand<C> {
     public prop name: String { get() { command.name } }
     public prop spec: JianCommandSpec { get() { command.spec } }
     public func run(args: JianArgCursor, _: C): Int64 { command.run(args) }
+    public func run(args: JianArgCursor, _: C, output!: JianOutput): Int64 {
+        command.run(args, output: output)
+    }
 }
 
 class PlainCallback<C> <: JianContextCallback<C> {
     PlainCallback(private let callback: JianCallback) {}
     public prop spec: JianCommandSpec { get() { callback.spec } }
     public func run(args: JianArgCursor, _: C): JianCallbackResult { callback.run(args) }
+    public func run(args: JianArgCursor, _: C, output!: JianOutput): JianCallbackResult {
+        callback.run(args, output: output)
+    }
 }
 
 func valueShorts(spec: JianCommandSpec): Array<Byte> {

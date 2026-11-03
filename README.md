@@ -392,3 +392,10 @@ and cannot be combined with command names, aliases, callbacks or child commands.
 `run(..., stdout: out, stderr: err)` overrides output streams for one invocation,
 including nested commands and usage errors. The app keeps its configured default
 streams for later runs, and leaves all streams open.
+
+Commands and callbacks can request those same streams with
+`output!: JianOutput = JianCurrentOutput()`, then write through `output.stdout`
+and `output.stderr`. No application context is required. Direct function calls
+supply `output: JianOutput(...)` explicitly. See
+[invocation output](docs/applications.md#invocation-output-streams) and the
+[runnable capture example](examples/output/src/main.cj).

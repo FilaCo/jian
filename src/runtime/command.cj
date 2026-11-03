@@ -20,6 +20,12 @@ public interface JianCommand {
      * throws JianUsageException on a malformed command line.
      */
     func run(args: JianArgCursor): Int64
+
+    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    func run(args: JianArgCursor, output!: JianOutput): Int64 {
+        let _ = output
+        run(args)
+    }
 }
 
 /**
@@ -38,6 +44,12 @@ public interface JianCallback {
      * throws JianUsageException on a malformed command line.
      */
     func run(args: JianArgCursor): JianCallbackResult
+
+    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    func run(args: JianArgCursor, output!: JianOutput): JianCallbackResult {
+        let _ = output
+        run(args)
+    }
 }
 
 /**
@@ -51,6 +63,12 @@ public interface JianContextCommand<C> {
      * Parses CLI inputs and invokes the command; malformed CLI input throws JianUsageException.
      */
     func run(args: JianArgCursor, context: C): Int64
+
+    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    func run(args: JianArgCursor, context: C, output!: JianOutput): Int64 {
+        let _ = output
+        run(args, context)
+    }
 }
 
 /**
@@ -64,6 +82,12 @@ public interface JianContextCallback<C> {
      * Malformed CLI input throws JianUsageException; other exceptions propagate.
      */
     func run(args: JianArgCursor, context: C): JianCallbackResult
+
+    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    func run(args: JianArgCursor, context: C, output!: JianOutput): JianCallbackResult {
+        let _ = output
+        run(args, context)
+    }
 }
 
 /** Selects a command's generated registration overload. */
