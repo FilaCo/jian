@@ -50,6 +50,11 @@ check callback_exit 0 'Fetching source files' '' fetch-src
 check callback_exit 0 'Running server over stdio' ''
 check callback_exit 2 '' $'Error: unknown command \'fetch-scr\'\nUsage: demo [OPTIONS] COMMAND [ARGS]...' fetch-scr
 
+check invocation_output 0 $'callback\nHello, Alice!' '' greet Alice
+check invocation_output 0 'demo 1.0' '' --version
+check invocation_output 0 $'callback\nUsage: demo greet [OPTIONS] NAME\n\nGreet through the selected invocation streams.\n\nArguments:\n  NAME  [required]\n\nOptions:\n  -h, --help  Show this message and exit.' '' greet --help
+check invocation_output 2 'callback' $'Error: missing argument \'NAME\'\nUsage: demo greet [OPTIONS] NAME' greet
+
 check command_names 0 'src: check=false' '' fmt src
 check command_names 0 'src: check=true' '' format src --check
 check command_names 0 'src: check=true' '' direct

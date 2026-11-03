@@ -82,6 +82,7 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         else { quote($(interfaceToken)<$(contextType)>) }
     let contextArgument = if (contextType.size == 0) { Tokens() }
         else { quote(, __jian_context: $(contextType)) }
+    let contextForward = if (contextType.size == 0) { Tokens() } else { quote(, __jian_context) }
     let visibility = contextVisibility(declaration)
     let className = Token(TokenKind.IDENTIFIER, sourceName[0..1].toAsciiUpper() + sourceName[1..] + suffix)
     let implementation = Token(TokenKind.IDENTIFIER, "__jian_${suffix.toAsciiLower()}_${sourceName}")
@@ -151,6 +152,16 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
         let typeName = parameter.paramType.toTokens()
         let slot = Token(TokenKind.IDENTIFIER, "__jian_value_${index}")
         let settings = parameterSettings(parameter)
+        if (settings.marker == "JianCurrentOutput") {
+            if (typeName.toString().replace(" ", "") != "JianOutput") {
+                throw ASTException("JianCurrentOutput requires parameter type JianOutput")
+            }
+            declaration.funcParams[index] = withoutDefault(parameter)
+            bindings += quote(let $(identifier): JianOutput = __jian_output;)
+            if (index > 0) { arguments += quote(,) }
+            arguments += quote($(identifier): $(identifier))
+            continue
+        }
         if (settings.marker == "JianCurrentInvocation") {
             if (!callback) { throw ASTException("JianCurrentInvocation is only supported by @JianCallback") }
             if (typeName.toString().replace(" ", "") != "JianInvocation") {
@@ -412,6 +423,10 @@ func commandAdapter(attrs: Tokens, input: Tokens, callback!: Bool = false): Toke
             $(commandName)
             public prop spec: JianCommandSpec { get() { $(specHelper)() } }
             public func run(__jian_args: JianArgCursor $(contextArgument)): $(returnType) {
+                run(__jian_args $(contextForward), JianOutput())
+            }
+            public func run(__jian_args: JianArgCursor $(contextArgument), __jian_output: JianOutput): $(returnType) {
+                let _ = __jian_output;
                 $(storage)
                 var __jian_position = 0
                 while (let Some(__jian_arg) <- __jian_args.peek()) {

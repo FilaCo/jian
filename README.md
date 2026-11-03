@@ -233,6 +233,16 @@ Describe the default action with the callback's `help:` setting; usage retains
 Direct calls supply `JianInvocation` explicitly. See
 [invocation metadata and default actions](docs/applications.md#invocation-metadata-and-default-actions).
 
+## Invocation output
+
+To write to the invocation's selected streams, request
+`output!: JianOutput = JianCurrentOutput()` in a command or callback and write
+through `output.stdout` or `output.stderr`. This follows `run(stdout:, stderr:)`
+and root app defaults throughout nested dispatch, without application context.
+Direct calls pass `output: JianOutput(stdout: out, stderr: err)` explicitly.
+See [Invocation output](docs/applications.md#invocation-output) and the
+[capture example](examples/invocation_output/src/main.cj).
+
 ## Typed context
 
 Use `@JianContext` on an application state class and request its fields with
@@ -351,6 +361,7 @@ Run it from its directory with `cjpm run -- ...`.
 | [sub_apps](examples/sub_apps/src/main.cj) | Callback and nested app | `-v project deploy staging` |
 | [custom_type](examples/custom_type/src/main.cj) | Derived enum parsing | `paint --color blue` |
 | [input_hooks](examples/input_hooks/src/main.cj) | Raw Path normalization and typed validation | `generate " model.json " --port 9000` |
+| [invocation_output](examples/invocation_output/src/main.cj) | Capture help, errors and handler output through per-run streams | `greet Alice`, `greet --help`, `--version` |
 | [context](examples/context/src/main.cj) | Typed dependencies, callback configuration and nested app | `--verbose people greet Alice` |
 
 The sync and deploy examples only print plans; they do not modify files or deploy.

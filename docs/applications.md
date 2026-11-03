@@ -217,6 +217,61 @@ Direct calls skip CLI parsing and retain other parameter defaults. Imported publ
 callbacks work the same way. The value currently contains only the requested name;
 it does not expose a full mount path or a string-keyed context.
 
+## Invocation output
+
+Commands and callbacks can request the invocation's effective streams without
+adding them to application context:
+
+```cangjie
+@JianCommand
+func greet(name: String, output!: JianOutput = JianCurrentOutput()) {
+    output.stdout.write("Hello, ${name}!\n".toArray())
+}
+
+let app = JianApp(name: "demo").add(greet)
+let out = ByteBuffer() // import std.io.ByteBuffer
+let err = ByteBuffer()
+app.run(["greet", "Alice"], stdout: out, stderr: err)
+
+// Direct calls provide the typed output explicitly and skip CLI parsing.
+greet("Alice", output: JianOutput(stdout: out, stderr: err))
+```
+
+`JianOutput.stdout` and `.stderr` are `std.io.OutputStream` values. Each stream
+comes from the corresponding per-run override, or the root app's configured
+default when that override is absent. The same effective streams carry help,
+usage errors, callback output and command output, including in mounted apps
+whose own defaults differ. Root commands and both `JianApp` and
+`JianContextApp<C>` support this marker; it composes with `JianFromContext<C>()`
+and callback `JianCurrentInvocation()` parameters.
+
+The marker creates no argument, option, usage placeholder or help row and does
+not require `JianArgValue`. It requires a named parameter explicitly spelled
+`JianOutput`, takes no arguments or type arguments, and is removed from direct
+function defaults. Other defaults still work and may refer to earlier injected
+output parameters. `JianOutput()` selects the process streams for explicit direct
+calls; pass `stdout:` and `stderr:` to select other destinations.
+
+Streams remain caller-owned and open after success, help, early callback exit,
+usage errors and execution failures. Jian does not retain per-run overrides for
+later invocations. Handlers control their writes and flushing. Other exceptions
+still propagate to the application; output injection adds no logging policy.
+Using `println` continues to write to process stdout; use the injected streams
+when output should follow invocation selection.
+
+Hand-written adapters may implement the additional
+`run(args: JianArgCursor, output: JianOutput)` overload, or
+`run(args: JianArgCursor, context: C, output: JianOutput)` for context adapters.
+Dispatch supplies effective output to that overload. Its default delegates to
+the original `run`, so existing adapters continue to work. Generated adapters
+also retain their original `run` overload, which uses process streams when
+called directly; their output overload accepts explicit streams.
+
+The runnable [output example](../examples/invocation_output/src/main.cj) captures
+all output with only `run(stdout:, stderr:)`, then replays the captured buffers.
+Try `greet Alice`, `greet --help`, `greet` (usage error), `--help`, and `--version`
+(callback early exit). No context or duplicate stream wiring is needed.
+
 ## Mounts
 
 ```cangjie
