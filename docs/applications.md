@@ -217,6 +217,62 @@ Direct calls skip CLI parsing and retain other parameter defaults. Imported publ
 callbacks work the same way. The value currently contains only the requested name;
 it does not expose a full mount path or a string-keyed context.
 
+## Invocation output streams
+
+Commands and callbacks can request the effective streams for this run without
+adding them to application context:
+
+```cangjie
+@JianCommand
+func greet(name: String, output!: JianOutput = JianCurrentOutput()) {
+    output.stdout.write("Hello, ${name}!\n".toArray())
+    output.stderr.write("Greeting complete\n".toArray())
+}
+
+let app = JianApp(name: "demo").add(greet)
+let out = ByteBuffer() // import std.io.ByteBuffer
+let err = ByteBuffer()
+app.run(["greet", "Alice"], stdout: out, stderr: err)
+```
+
+`JianOutput.stdout` and `.stderr` are `std.io.OutputStream` values. Each stream
+comes from that run's override, or from the root app's configured default when
+omitted. Help and usage errors use those same effective streams. Nested callbacks,
+named commands and root actions receive the root dispatch streams, even if a
+child app has different defaults. Overrides are not retained for later runs.
+Reentrant invocations keep their own values; no mutable current-output state is
+used. Both `JianApp` and `JianContextApp<C>` support this injection, including
+functions also using `JianFromContext<C>()` or `JianCurrentInvocation()`.
+
+The marker requires a named parameter spelled `JianOutput` and accepts no
+arguments or type arguments. Injection creates no CLI argument, option or help
+row and does not require `JianArgValue`. The macro removes its default. Supply
+output explicitly for direct calls, which still retain other defaults:
+
+```cangjie
+greet("Alice", output: JianOutput(stdout: out, stderr: err))
+// JianOutput() explicitly selects the process stdout and stderr.
+greet("Alice", output: JianOutput())
+```
+
+Jian borrows the streams and never closes them. Handlers decide when to flush,
+what to write to each stream and how to handle execution failures. Only usage
+exceptions receive the framework's usual error formatting; other exceptions
+propagate. `println` and other process-output functions still use process streams;
+write through the injected value when output should follow `run` selection.
+
+The runnable [output example](../examples/output/src/main.cj), invoked with no
+arguments, captures help, usage errors, callback output (including an early exit)
+and command output using only per-run stream selection. With arguments it runs
+the example CLI normally, such as `greet Alice` or `--schema`.
+
+Hand-written adapters can override `run(args, output: streams)`, or
+`run(args, context, output: streams)` for context adapters, to consume these streams.
+The original overloads remain required and existing adapters continue to work;
+the new overloads forward to them by default. Generated adapters also retain
+`run(args)` / `run(args, context)` for explicit adapter calls, selecting process
+streams in that case. Ordinary direct function calls always supply `JianOutput`.
+
 ## Mounts
 
 ```cangjie

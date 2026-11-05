@@ -1,6 +1,8 @@
 package jian.runtime
 
-/** Read-only metadata for one invocation at one application level, independent of dependency context. */
+/**
+ * Read-only metadata for one invocation at one application level, independent of dependency context.
+ */
 public struct JianInvocation {
     /**
      * The next command operand after parsing the callback's arguments and options, or None.

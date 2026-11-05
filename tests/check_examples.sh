@@ -31,6 +31,10 @@ check single_command 0 'Hello, help!' '' help
 check single_command 0 'Hello, -h!' '' -- -h
 check single_command 2 '' $'Error: missing argument \'NAME\'\nUsage: demo [OPTIONS] NAME'
 
+check output 0 $'Preparing command\nHello, Alice!' 'Greeting complete' greet Alice
+check output 0 '{"type":"object"}' '' --schema
+check output 2 'Preparing command' $'Error: missing argument \'NAME\'\nUsage: demo greet [OPTIONS] NAME' greet
+
 check greet 0 'Hello, Alice!' '' greet Alice
 check greet 0 $'HELLO, ALICE!\nHELLO, ALICE!' '' greet Alice -lt2
 check greet 0 'Hello, -h!' '' greet -- -h
@@ -66,3 +70,13 @@ check input_hooks 0 'model.json:8080:model' '' generate ' model.json '
 check input_hooks 0 'model.json:9000:custom' '' generate model.json --port 9000 --name CUSTOM
 check input_hooks 2 '' $'Error: invalid value for \'MODEL\': path must not be blank\nUsage: demo generate [OPTIONS] MODEL' generate '  '
 check input_hooks 2 '' $'Error: invalid value for \'--port\': port must be between 1 and 65535\nUsage: demo generate [OPTIONS] MODEL' generate model.json --port 0
+
+# The default mode captures every output path through per-run overrides only.
+"$root/examples/output/target/release/bin/main" > "$example_tmp/captured" 2> "$example_tmp/stderr"
+test ! -s "$example_tmp/stderr"
+for expected in 'Captured stdout:' 'Usage: demo [OPTIONS] COMMAND [ARGS]...' \
+    'Preparing command' 'Hello, Alice!' '{"type":"object"}' 'Captured stderr:' \
+    'Greeting complete' "Error: missing argument 'NAME'" 'Usage: demo greet [OPTIONS] NAME'; do
+    grep -Fx -- "$expected" "$example_tmp/captured" > /dev/null
+done
+echo 'PASS output capture'

@@ -14,7 +14,9 @@ public macro JianDerive(attrs: Tokens, input: Tokens): Tokens {
     enumArgValue(input)
 }
 
-/** Requires an explicit interface, as in `@JianDerive[JianArgValue]`. */
+/**
+ * Requires an explicit interface, as in `@JianDerive[JianArgValue]`.
+ */
 public macro JianDerive(input: Tokens): Tokens {
     throw ASTException("@JianDerive requires exactly one supported interface: JianArgValue")
 }

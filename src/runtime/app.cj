@@ -21,18 +21,24 @@ public class JianApp {
         core = AppCore<Unit>(help, stderr, stdout)
     }
 
-    /** Selects the sole root action; incompatible with callbacks, commands and groups. */
+    /**
+     * Selects the sole root action; incompatible with callbacks, commands and groups.
+     */
     public func command(factory: (JianCommandTag) -> JianCommand): JianApp {
         command(factory(JianCommandTag()))
     }
 
-    /** Runs this adapter directly after the executable name, without command selection. */
+    /**
+     * Runs this adapter directly after the executable name, without command selection.
+     */
     public func command(value: JianCommand): JianApp {
         core.command(PlainCommand<Unit>(value))
         this
     }
 
-    /** Registers a function annotated with @JianCommand. */
+    /**
+     * Registers a function annotated with @JianCommand.
+     */
     public func add(factory: (JianCommandTag) -> JianCommand): JianApp {
         add(factory(JianCommandTag()))
     }
@@ -55,7 +61,9 @@ public class JianApp {
         this
     }
 
-    /** Registers a function annotated with @JianCallback. */
+    /**
+     * Registers a function annotated with @JianCallback.
+     */
     public func callback(factory: (JianCallbackTag) -> JianCallback): JianApp {
         callback(factory(JianCallbackTag()))
     }
@@ -96,31 +104,43 @@ public class JianContextApp<C> {
         core = AppCore<C>(help, stderr, stdout)
     }
 
-    /** Selects the sole root action requiring this run's context. */
+    /**
+     * Selects the sole root action requiring this run's context.
+     */
     public func command(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
         command(factory(JianContextCommandTag<C>()))
     }
 
-    /** Selects a root action that ignores the context. */
+    /**
+     * Selects a root action that ignores the context.
+     */
     public func command(factory: (JianCommandTag) -> JianCommand): JianContextApp<C> {
         command(factory(JianCommandTag()))
     }
 
-    /** Incompatible with callbacks, named commands and groups, in either registration order. */
+    /**
+     * Incompatible with callbacks, named commands and groups, in either registration order.
+     */
     public func command(value: JianContextCommand<C>): JianContextApp<C> {
         core.command(value)
         this
     }
 
-    /** Selects a context-free adapter as the sole root action. */
+    /**
+     * Selects a context-free adapter as the sole root action.
+     */
     public func command(value: JianCommand): JianContextApp<C> { command(PlainCommand<C>(value)) }
 
-    /** Registers a function requiring this context, annotated with @JianCommand. */
+    /**
+     * Registers a function requiring this context, annotated with @JianCommand.
+     */
     public func add(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
         add(factory(JianContextCommandTag<C>()))
     }
 
-    /** Registers a function annotated with @JianCommand that ignores the context. */
+    /**
+     * Registers a function annotated with @JianCommand that ignores the context.
+     */
     public func add(factory: (JianCommandTag) -> JianCommand): JianContextApp<C> {
         add(factory(JianCommandTag()))
     }
@@ -165,12 +185,16 @@ public class JianContextApp<C> {
         this
     }
 
-    /** Registers a function requiring this context, annotated with @JianCallback. */
+    /**
+     * Registers a function requiring this context, annotated with @JianCallback.
+     */
     public func callback(factory: (JianContextCallbackTag<C>) -> JianContextCallback<C>): JianContextApp<C> {
         callback(factory(JianContextCallbackTag<C>()))
     }
 
-    /** Registers a function annotated with @JianCallback that ignores the context. */
+    /**
+     * Registers a function annotated with @JianCallback that ignores the context.
+     */
     public func callback(factory: (JianCallbackTag) -> JianCallback): JianContextApp<C> {
         callback(factory(JianCallbackTag()))
     }
@@ -307,7 +331,7 @@ class AppCore<C> {
             }
             let args = JianArgCursor(callbackArgv, shortsTakingValue: valueShorts(spec))
             if (let Some(value) <- appCallback) {
-                match (value.run(args, context)) {
+                match (value.run(args, context, output: JianOutput(stdout: output, stderr: errors))) {
                     case JianCallbackResult.Continue => ()
                     case JianCallbackResult.Exit(code) => return code
                 }
@@ -342,7 +366,8 @@ class AppCore<C> {
                         output.flush()
                         return 0
                     }
-                    return command.run(JianArgCursor(remaining, shortsTakingValue: valueShorts(commandSpec)), context)
+                    return command.run(JianArgCursor(remaining, shortsTakingValue: valueShorts(commandSpec)), context,
+                        output: JianOutput(stdout: output, stderr: errors))
                 }
             }
             for (app in apps) {
@@ -372,7 +397,8 @@ class AppCore<C> {
                 output.flush()
                 return 0
             }
-            command.run(JianArgCursor(argv, shortsTakingValue: valueShorts(spec)), context)
+            command.run(JianArgCursor(argv, shortsTakingValue: valueShorts(spec)), context,
+                output: JianOutput(stdout: output, stderr: errors))
         } catch (error: JianUsageException) {
             errors.write("Error: ${error.message}\n${usageLine(path, spec)}".toArray())
             errors.flush()
@@ -462,12 +488,18 @@ class PlainCommand<C> <: JianContextCommand<C> {
     public prop name: String { get() { command.name } }
     public prop spec: JianCommandSpec { get() { command.spec } }
     public func run(args: JianArgCursor, _: C): Int64 { command.run(args) }
+    public func run(args: JianArgCursor, _: C, output!: JianOutput): Int64 {
+        command.run(args, output: output)
+    }
 }
 
 class PlainCallback<C> <: JianContextCallback<C> {
     PlainCallback(private let callback: JianCallback) {}
     public prop spec: JianCommandSpec { get() { callback.spec } }
     public func run(args: JianArgCursor, _: C): JianCallbackResult { callback.run(args) }
+    public func run(args: JianArgCursor, _: C, output!: JianOutput): JianCallbackResult {
+        callback.run(args, output: output)
+    }
 }
 
 func valueShorts(spec: JianCommandSpec): Array<Byte> {

@@ -11,6 +11,7 @@ import std.ast.*
  * The return type may be inferred; exceptions propagate through app.run.
  * Supports the same value types, defaults and `help` setting as `@JianCommand`.
  * JianFromContext<C>() parameters receive dependencies from the context supplied to run.
+ * JianCurrentOutput() injects JianOutput with this run's streams; direct callers supply it explicitly.
  * JianCurrentInvocation() injects JianInvocation after parsing, without creating a CLI input;
  * direct callers must supply it explicitly. requestedSubcommand may name an unknown command.
  */

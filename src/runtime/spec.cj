@@ -15,7 +15,9 @@ public struct JianCommandSpec {
          * Arguments and options, in declaration order.
          */
         public let inputs!: Array<JianInputSpec> = [],
-        /** Alternative command spellings, in declaration order. */
+        /**
+         * Alternative command spellings, in declaration order.
+         */
         public let aliases!: Array<String> = []
     ) {}
 }
