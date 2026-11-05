@@ -103,7 +103,9 @@ func requestsHelp(argv: Array<String>, spec: JianCommandSpec, app!: Bool = false
     false
 }
 
-/** Returns targets only when help occupies the app's command slot. */
+/**
+ * Returns targets only when help occupies the app's command slot.
+ */
 func groupHelpTarget(argv: Array<String>, spec: JianCommandSpec): ?Array<String> {
     let args = JianArgCursor(argv, shortsTakingValue: valueShorts(spec))
     let positionals = spec.inputs.filter({ input => input.kind == JianInputKind.Positional })

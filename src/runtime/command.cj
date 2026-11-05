@@ -21,7 +21,9 @@ public interface JianCommand {
      */
     func run(args: JianArgCursor): Int64
 
-    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    /**
+     * Runs with the effective invocation streams; existing adapters may ignore them.
+     */
     func run(args: JianArgCursor, output!: JianOutput): Int64 {
         let _ = output
         run(args)
@@ -45,7 +47,9 @@ public interface JianCallback {
      */
     func run(args: JianArgCursor): JianCallbackResult
 
-    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    /**
+     * Runs with the effective invocation streams; existing adapters may ignore them.
+     */
     func run(args: JianArgCursor, output!: JianOutput): JianCallbackResult {
         let _ = output
         run(args)
@@ -64,7 +68,9 @@ public interface JianContextCommand<C> {
      */
     func run(args: JianArgCursor, context: C): Int64
 
-    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    /**
+     * Runs with the effective invocation streams; existing adapters may ignore them.
+     */
     func run(args: JianArgCursor, context: C, output!: JianOutput): Int64 {
         let _ = output
         run(args, context)
@@ -83,21 +89,31 @@ public interface JianContextCallback<C> {
      */
     func run(args: JianArgCursor, context: C): JianCallbackResult
 
-    /** Runs with the effective invocation streams; existing adapters may ignore them. */
+    /**
+     * Runs with the effective invocation streams; existing adapters may ignore them.
+     */
     func run(args: JianArgCursor, context: C, output!: JianOutput): JianCallbackResult {
         let _ = output
         run(args, context)
     }
 }
 
-/** Selects a command's generated registration overload. */
+/**
+ * Selects a command's generated registration overload.
+ */
 public struct JianCommandTag {}
 
-/** Selects a callback's generated registration overload. */
+/**
+ * Selects a callback's generated registration overload.
+ */
 public struct JianCallbackTag {}
 
-/** Selects a command's registration overload for context C. */
+/**
+ * Selects a command's registration overload for context C.
+ */
 public struct JianContextCommandTag<C> {}
 
-/** Selects a callback's registration overload for context C. */
+/**
+ * Selects a callback's registration overload for context C.
+ */
 public struct JianContextCallbackTag<C> {}

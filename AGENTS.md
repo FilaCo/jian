@@ -29,9 +29,11 @@ signatures and type parameters. Runtime metadata uses `JianInputSpec`,
 
 ## Public API naming
 
-Framework-owned public types and macros use the `Jian` prefix, including
-`JianOption` and `JianArgument`. Public free functions use a `jian` prefix in
-camelCase, such as `jianAcceptAs`. Members retain their ordinary names.
+Framework-owned public types and macros use the `Jian` prefix. Public free
+functions use a `jian` prefix in camelCase, such as `jianAcceptAs`. Parameter-default
+marker functions are exceptions: `JianOption`, `JianArgument`, `JianFromContext`,
+`JianCurrentInvocation` and `JianCurrentOutput` retain the `Jian` prefix and
+PascalCase. Members retain their ordinary names.
 Generated adapter names come from the user's function (`GreetCommand`,
 `ConfigureCallback`); they do not add the framework prefix.
 

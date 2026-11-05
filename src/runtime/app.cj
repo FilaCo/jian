@@ -21,18 +21,24 @@ public class JianApp {
         core = AppCore<Unit>(help, stderr, stdout)
     }
 
-    /** Selects the sole root action; incompatible with callbacks, commands and groups. */
+    /**
+     * Selects the sole root action; incompatible with callbacks, commands and groups.
+     */
     public func command(factory: (JianCommandTag) -> JianCommand): JianApp {
         command(factory(JianCommandTag()))
     }
 
-    /** Runs this adapter directly after the executable name, without command selection. */
+    /**
+     * Runs this adapter directly after the executable name, without command selection.
+     */
     public func command(value: JianCommand): JianApp {
         core.command(PlainCommand<Unit>(value))
         this
     }
 
-    /** Registers a function annotated with @JianCommand. */
+    /**
+     * Registers a function annotated with @JianCommand.
+     */
     public func add(factory: (JianCommandTag) -> JianCommand): JianApp {
         add(factory(JianCommandTag()))
     }
@@ -55,7 +61,9 @@ public class JianApp {
         this
     }
 
-    /** Registers a function annotated with @JianCallback. */
+    /**
+     * Registers a function annotated with @JianCallback.
+     */
     public func callback(factory: (JianCallbackTag) -> JianCallback): JianApp {
         callback(factory(JianCallbackTag()))
     }
@@ -96,31 +104,43 @@ public class JianContextApp<C> {
         core = AppCore<C>(help, stderr, stdout)
     }
 
-    /** Selects the sole root action requiring this run's context. */
+    /**
+     * Selects the sole root action requiring this run's context.
+     */
     public func command(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
         command(factory(JianContextCommandTag<C>()))
     }
 
-    /** Selects a root action that ignores the context. */
+    /**
+     * Selects a root action that ignores the context.
+     */
     public func command(factory: (JianCommandTag) -> JianCommand): JianContextApp<C> {
         command(factory(JianCommandTag()))
     }
 
-    /** Incompatible with callbacks, named commands and groups, in either registration order. */
+    /**
+     * Incompatible with callbacks, named commands and groups, in either registration order.
+     */
     public func command(value: JianContextCommand<C>): JianContextApp<C> {
         core.command(value)
         this
     }
 
-    /** Selects a context-free adapter as the sole root action. */
+    /**
+     * Selects a context-free adapter as the sole root action.
+     */
     public func command(value: JianCommand): JianContextApp<C> { command(PlainCommand<C>(value)) }
 
-    /** Registers a function requiring this context, annotated with @JianCommand. */
+    /**
+     * Registers a function requiring this context, annotated with @JianCommand.
+     */
     public func add(factory: (JianContextCommandTag<C>) -> JianContextCommand<C>): JianContextApp<C> {
         add(factory(JianContextCommandTag<C>()))
     }
 
-    /** Registers a function annotated with @JianCommand that ignores the context. */
+    /**
+     * Registers a function annotated with @JianCommand that ignores the context.
+     */
     public func add(factory: (JianCommandTag) -> JianCommand): JianContextApp<C> {
         add(factory(JianCommandTag()))
     }
@@ -165,12 +185,16 @@ public class JianContextApp<C> {
         this
     }
 
-    /** Registers a function requiring this context, annotated with @JianCallback. */
+    /**
+     * Registers a function requiring this context, annotated with @JianCallback.
+     */
     public func callback(factory: (JianContextCallbackTag<C>) -> JianContextCallback<C>): JianContextApp<C> {
         callback(factory(JianContextCallbackTag<C>()))
     }
 
-    /** Registers a function annotated with @JianCallback that ignores the context. */
+    /**
+     * Registers a function annotated with @JianCallback that ignores the context.
+     */
     public func callback(factory: (JianCallbackTag) -> JianCallback): JianContextApp<C> {
         callback(factory(JianCallbackTag()))
     }
